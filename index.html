@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NAOTARO — Developer / High School Student</title>
+<meta name="description" content="鎌田直太朗（Naotaro Kamata）のポートフォリオ。日本の高校生。AIを使ってアプリをつくっています。">
+<meta property="og:title" content="NAOTARO — Developer / High School Student">
+<meta property="og:description" content="日本の高校生。AIを使ってアプリをつくっています。">
+<meta property="og:type" content="website">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#000;
+  --paper:#fff;
+  --nav-h:64px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--paper);
+  color:var(--ink);
+  font-family:"Outfit","Zen Maru Gothic",-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;
+  font-weight:700;
+  -webkit-font-smoothing:antialiased;
+  overflow-x:hidden;
+}
+.wrap{max-width:1100px;margin:0 auto;padding:0 24px;}
+
+/* ---------- NAV ---------- */
+header{
+  position:fixed;top:0;left:0;right:0;z-index:100;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 20px;
+  pointer-events:none;
+}
+.logo{
+  font-size:26px;font-weight:900;letter-spacing:-.02em;
+  color:var(--paper);
+  mix-blend-mode:difference;
+  pointer-events:auto;
+  text-decoration:none;
+}
+nav{display:flex;gap:8px;pointer-events:auto;}
+nav a{
+  display:block;
+  background:var(--ink);color:var(--paper);
+  font-size:12px;font-weight:800;letter-spacing:.12em;
+  padding:11px 20px;border-radius:999px;
+  text-decoration:none;
+  transition:transform .18s ease, opacity .18s ease;
+}
+nav a:hover{transform:translateY(-2px);opacity:.75;}
+.menu-btn{display:none;}
+
+/* ---------- HERO ---------- */
+.hero{
+  display:grid;grid-template-columns:1fr 1fr;
+  min-height:100svh;
+}
+.hero-left{
+  background:var(--ink);
+  display:flex;align-items:center;justify-content:center;
+  padding:80px 32px;
+  overflow:hidden;
+}
+.hero-left svg{width:100%;max-width:420px;height:auto;}
+.hero-right{
+  background:var(--paper);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:100px 32px 60px;
+  text-align:center;
+  position:relative;
+}
+.eyebrow{
+  font-size:13px;font-weight:800;letter-spacing:.18em;
+  margin-bottom:28px;
+}
+.hero-name{
+  font-size:clamp(52px,8vw,110px);
+  font-weight:900;letter-spacing:-.03em;line-height:.95;
+}
+.hero-sub{
+  margin-top:24px;
+  font-size:14px;font-weight:700;line-height:1.9;
+  letter-spacing:.04em;
+}
+.scroll-cue{
+  position:absolute;bottom:44px;left:50%;transform:translateX(-50%);
+  width:104px;height:104px;
+}
+.scroll-cue svg{width:100%;height:100%;}
+.scroll-cue .ring{animation:spin 12s linear infinite;transform-origin:52px 52px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ---------- SECTIONS ---------- */
+section{padding:110px 0;scroll-margin-top:0;}
+.sec-head{
+  display:flex;align-items:baseline;gap:16px;
+  margin-bottom:48px;
+}
+.sec-num{font-size:13px;font-weight:800;letter-spacing:.14em;}
+.sec-title{font-size:clamp(34px,5.5vw,60px);font-weight:900;letter-spacing:-.02em;line-height:1;}
+
+/* WORKS */
+.works{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:20px;}
+.card{
+  border:3px solid var(--ink);border-radius:24px;
+  padding:30px 26px;
+  display:flex;flex-direction:column;gap:12px;
+  transition:transform .2s ease,background .2s ease,color .2s ease;
+}
+.card:hover{transform:translateY(-6px);background:var(--ink);color:var(--paper);}
+.card .tag{
+  font-size:11px;font-weight:800;letter-spacing:.14em;
+  border:2px solid currentColor;border-radius:999px;
+  padding:5px 12px;align-self:flex-start;
+}
+.card h3{font-size:24px;font-weight:900;letter-spacing:-.01em;}
+.card p{font-size:14px;font-weight:500;line-height:1.85;font-family:"Zen Maru Gothic",sans-serif;}
+.note{
+  margin-top:26px;font-size:13px;font-weight:500;line-height:1.9;
+  font-family:"Zen Maru Gothic",sans-serif;opacity:.6;
+}
+
+/* PROFILE */
+.profile{background:var(--ink);color:var(--paper);}
+.profile .prof-grid{display:grid;grid-template-columns:1fr 1.4fr;gap:56px;align-items:start;}
+.prof-mark{
+  border:3px solid var(--paper);border-radius:28px;
+  padding:34px;text-align:center;
+}
+.prof-mark .jp{font-family:"Zen Maru Gothic",sans-serif;font-size:34px;font-weight:900;letter-spacing:.06em;}
+.prof-mark .en{margin-top:10px;font-size:12px;font-weight:800;letter-spacing:.2em;}
+.prof-body p{
+  font-family:"Zen Maru Gothic",sans-serif;
+  font-size:15px;font-weight:500;line-height:2.1;margin-bottom:20px;
+}
+.facts{list-style:none;margin-top:32px;display:grid;gap:0;}
+.facts li{
+  display:grid;grid-template-columns:130px 1fr;gap:16px;
+  padding:16px 0;border-top:2px solid rgba(255,255,255,.25);
+  font-size:14px;
+}
+.facts li:last-child{border-bottom:2px solid rgba(255,255,255,.25);}
+.facts .k{font-weight:800;letter-spacing:.1em;font-size:12px;padding-top:2px;}
+.facts .v{font-family:"Zen Maru Gothic",sans-serif;font-weight:500;line-height:1.7;}
+
+/* CONTACT */
+.contact{text-align:center;}
+.contact .big{
+  font-size:clamp(30px,6vw,72px);font-weight:900;letter-spacing:-.03em;
+  word-break:break-all;line-height:1.1;
+}
+.contact a.mail{color:inherit;text-decoration:none;border-bottom:5px solid var(--ink);}
+.contact a.mail:hover{opacity:.55;}
+.links{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:44px;}
+.links a{
+  background:var(--ink);color:var(--paper);
+  font-size:12px;font-weight:800;letter-spacing:.14em;
+  padding:14px 28px;border-radius:999px;text-decoration:none;
+  transition:transform .18s ease,opacity .18s ease;
+}
+.links a:hover{transform:translateY(-2px);opacity:.75;}
+
+footer{
+  border-top:3px solid var(--ink);
+  padding:28px 0;font-size:11px;font-weight:700;letter-spacing:.12em;
+}
+footer .wrap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;}
+
+/* ---------- MOBILE ---------- */
+@media (max-width:860px){
+  .hero{grid-template-columns:1fr;min-height:auto;}
+  .hero-left{padding:96px 40px 48px;}
+  .hero-left svg{max-width:260px;}
+  .hero-right{padding:56px 24px 150px;min-height:auto;}
+  .scroll-cue{bottom:34px;width:84px;height:84px;}
+  .profile .prof-grid{grid-template-columns:1fr;gap:32px;}
+  .facts li{grid-template-columns:1fr;gap:4px;}
+  section{padding:76px 0;}
+  header{padding:10px 14px;}
+  .logo{font-size:21px;}
+  nav{gap:5px;}
+  nav a{padding:9px 12px;font-size:10px;letter-spacing:.08em;}
+}
+@media (max-width:520px){
+  nav a:nth-child(3){display:none;}
+  .wrap{padding:0 20px;}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <a href="#home" class="logo">NAOTARO</a>
+  <nav>
+    <a href="#works">WORKS</a>
+    <a href="#profile">PROFILE</a>
+    <a href="#contact">CONTACT</a>
+  </nav>
+</header>
+
+<!-- ===== HERO ===== -->
+<div class="hero" id="home">
+  <div class="hero-left">
+    <svg viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="illustration">
+      <g stroke="#fff" stroke-width="13" stroke-linecap="round" stroke-linejoin="round">
+        <!-- spark -->
+        <path d="M300 62c8-14 22-14 30 0" fill="none"/>
+        <circle cx="348" cy="52" r="7" fill="#fff" stroke="none"/>
+        <!-- head -->
+        <circle cx="150" cy="120" r="58" fill="#fff"/>
+        <!-- hair -->
+        <path d="M92 120c0-32 26-58 58-58 20 0 37 10 47 25-18 6-30 16-38 30" fill="#000" stroke="#fff"/>
+        <!-- eyes -->
+        <path d="M132 118c5-6 13-6 18 0" fill="none" stroke="#000" stroke-width="9"/>
+        <path d="M168 118c5-6 13-6 18 0" fill="none" stroke="#000" stroke-width="9"/>
+        <!-- body -->
+        <path d="M78 300c0-40 32-72 72-72s72 32 72 72" fill="#fff"/>
+        <!-- laptop -->
+        <path d="M186 300h150l24-84H210l-24 84z" fill="#000" stroke="#fff"/>
+        <path d="M170 300h182" stroke="#fff"/>
+        <!-- code marks on screen -->
+        <path d="M244 244l-14 14 14 14" stroke="#fff" stroke-width="10"/>
+        <path d="M296 244l14 14-14 14" stroke="#fff" stroke-width="10"/>
+        <path d="M276 240l-12 36" stroke="#fff" stroke-width="10"/>
+        <!-- arm -->
+        <path d="M198 262c-16 6-26 20-26 38" fill="none"/>
+      </g>
+    </svg>
+  </div>
+
+  <div class="hero-right">
+    <div class="eyebrow">DEVELOPER / HIGH SCHOOL STUDENT</div>
+    <h1 class="hero-name">NAOTARO</h1>
+    <p class="hero-sub">
+      鎌田 直太朗<br>
+      日本の高校生。AIを使ってアプリをつくっています。
+    </p>
+
+    <div class="scroll-cue" aria-hidden="true">
+      <svg viewBox="0 0 104 104">
+        <defs>
+          <path id="circlePath" d="M52,52 m-40,0 a40,40 0 1,1 80,0 a40,40 0 1,1 -80,0"/>
+        </defs>
+        <g class="ring">
+          <text font-size="11" font-weight="800" letter-spacing="3.2" fill="#000">
+            <textPath href="#circlePath" startOffset="0">SCROLL DOWN · SCROLL DOWN · </textPath>
+          </text>
+        </g>
+        <path d="M46 48l6 7 6-7" stroke="#000" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+    </div>
+  </div>
+</div>
+
+<!-- ===== WORKS ===== -->
+<section id="works">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">01</span>
+      <h2 class="sec-title">WORKS</h2>
+    </div>
+
+    <div class="works">
+      <article class="card">
+        <span class="tag">APP</span>
+        <h3>Project 01</h3>
+        <p>準備中です。作品名と、何を解決するためにつくったかをここに記載します。</p>
+      </article>
+      <article class="card">
+        <span class="tag">APP</span>
+        <h3>Project 02</h3>
+        <p>準備中です。作品名と、何を解決するためにつくったかをここに記載します。</p>
+      </article>
+      <article class="card">
+        <span class="tag">IN PROGRESS</span>
+        <h3>Project 03</h3>
+        <p>現在つくっているもの。進行中のプロジェクトもここに載せていきます。</p>
+      </article>
+    </div>
+
+    <p class="note">※ 作品の詳細ページは順次公開します。最新の状況は CONTACT からお問い合わせください。</p>
+  </div>
+</section>
+
+<!-- ===== PROFILE ===== -->
+<section id="profile" class="profile">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="sec-num">02</span>
+      <h2 class="sec-title">PROFILE</h2>
+    </div>
+
+    <div class="prof-grid">
+      <div class="prof-mark">
+        <div class="jp">鎌田 直太朗</div>
+        <div class="en">NAOTARO KAMATA</div>
+      </div>
+
+      <div class="prof-body">
+        <p>
+          日本の高校生です。日常のなかで感じた不便や課題を、そのままにせず自分でアプリとしてかたちにすることを続けています。
+        </p>
+        <p>
+          つくることそのものより、「誰の何が楽になるか」を考える時間を大切にしています。AIを開発の相棒として使いながら、思いついたものを最短で動く状態まで持っていくやり方を得意としています。
+        </p>
+
+        <ul class="facts">
+          <li><span class="k">BASED IN</span><span class="v">日本</span></li>
+          <li><span class="k">STATUS</span><span class="v">高校生 / 個人開発</span></li>
+          <li><span class="k">FOCUS</span><span class="v">アプリ開発、AI活用、プロダクト企画</span></li>
+          <li><span class="k">OPEN TO</span><span class="v">制作のご依頼、共同開発、その他ご相談</span></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ===== CONTACT ===== -->
+<section id="contact" class="contact">
+  <div class="wrap">
+    <div class="sec-head" style="justify-content:center;">
+      <span class="sec-num">03</span>
+      <h2 class="sec-title">CONTACT</h2>
+    </div>
+
+    <p style="font-family:'Zen Maru Gothic',sans-serif;font-weight:500;font-size:15px;line-height:2;margin-bottom:38px;">
+      ご依頼・ご相談・ご質問など、お気軽にご連絡ください。
+    </p>
+
+    <div class="big">
+      <a class="mail" href="mailto:naotaro.lego713@gmail.com">naotaro.lego713<br>@gmail.com</a>
+    </div>
+
+    <div class="links">
+      <a href="mailto:naotaro.lego713@gmail.com">SEND EMAIL</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <span>© NAOTARO KAMATA</span>
+    <span>LAST UPDATED 2026.08</span>
+  </div>
+</footer>
+
+</body>
+</html>
