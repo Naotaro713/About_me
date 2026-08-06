@@ -3,11 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>NAOTARO — Developer / High School Student</title>
+<title>NAOTARO — Builder / High School Student</title>
 <meta name="description" content="鎌田直太朗（Naotaro Kamata）のポートフォリオ。日本の高校生。AIを使ってアプリをつくっています。">
-<meta property="og:title" content="NAOTARO — Developer / High School Student">
+<meta property="og:title" content="NAOTARO — Builder / High School Student">
 <meta property="og:description" content="日本の高校生。AIを使ってアプリをつくっています。">
 <meta property="og:type" content="website">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23000'/%3E%3Ctext x='50' y='50' font-family='Helvetica,Arial,sans-serif' font-size='62' font-weight='bold' fill='%23fff' text-anchor='middle' dominant-baseline='central'%3EN%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
@@ -28,6 +29,39 @@ body{
   overflow-x:hidden;
 }
 .wrap{max-width:1100px;margin:0 auto;padding:0 24px;}
+
+/* ---------- LOADER ---------- */
+#loader{
+  position:fixed;inset:0;z-index:9999;
+  background:var(--ink);color:var(--paper);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:34px;
+  transition:opacity .7s ease .15s, visibility .7s ease .15s;
+}
+#loader.done{opacity:0;visibility:hidden;}
+.ld-name{
+  font-size:clamp(38px,9vw,84px);font-weight:900;letter-spacing:-.03em;
+  display:flex;overflow:hidden;
+}
+.ld-name span{
+  display:inline-block;transform:translateY(110%);
+  animation:rise .75s cubic-bezier(.2,.8,.25,1) forwards;
+}
+@keyframes rise{to{transform:translateY(0);}}
+.ld-bar{
+  width:min(240px,54vw);height:4px;border-radius:99px;
+  background:rgba(255,255,255,.22);overflow:hidden;
+}
+.ld-bar i{
+  display:block;height:100%;width:0;background:var(--paper);border-radius:99px;
+  animation:fill 1.5s cubic-bezier(.4,0,.15,1) forwards;
+}
+@keyframes fill{0%{width:0}55%{width:62%}100%{width:100%}}
+.ld-tag{font-size:10px;font-weight:800;letter-spacing:.32em;opacity:.55;}
+body.loading{overflow:hidden;}
+@media (prefers-reduced-motion:reduce){
+  .ld-name span{transform:none;animation:none;}
+  .ld-bar i{animation-duration:.3s;}
+}
 
 /* ---------- NAV ---------- */
 header{
@@ -66,7 +100,14 @@ nav a:hover{transform:translateY(-2px);opacity:.75;}
   padding:80px 32px;
   overflow:hidden;
 }
-.hero-left svg{width:100%;max-width:420px;height:auto;}
+.hero-left svg{width:100%;max-width:400px;height:auto;overflow:visible;}
+.mark .frame-a{transform-origin:200px 200px;animation:rot 26s linear infinite;}
+.mark .frame-b{transform-origin:200px 200px;animation:rot 26s linear infinite reverse;}
+.mark .orbit-dot{transform-origin:200px 200px;animation:rot 14s linear infinite;}
+@keyframes rot{to{transform:rotate(360deg);}}
+@media (prefers-reduced-motion:reduce){
+  .mark .frame-a,.mark .frame-b,.mark .orbit-dot,.scroll-cue .ring{animation:none;}
+}
 .hero-right{
   background:var(--paper);
   display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -118,8 +159,49 @@ section{padding:110px 0;scroll-margin-top:0;}
   border:2px solid currentColor;border-radius:999px;
   padding:5px 12px;align-self:flex-start;
 }
-.card h3{font-size:24px;font-weight:900;letter-spacing:-.01em;}
+.card h3{font-size:23px;font-weight:900;letter-spacing:-.01em;line-height:1.3;}
 .card p{font-size:14px;font-weight:500;line-height:1.85;font-family:"Zen Maru Gothic",sans-serif;}
+.thumb{
+  aspect-ratio:16/10;border-radius:14px;overflow:hidden;
+  border:2px dashed currentColor;
+  display:flex;align-items:center;justify-content:center;
+  font-size:11px;font-weight:800;letter-spacing:.14em;opacity:.45;
+  margin-bottom:4px;
+}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block;}
+.stack{
+  display:flex;flex-wrap:wrap;gap:6px;margin-top:auto;padding-top:6px;
+}
+.stack span{
+  font-size:10px;font-weight:800;letter-spacing:.1em;
+  border:2px solid currentColor;border-radius:999px;padding:4px 10px;opacity:.75;
+}
+.card .visit{
+  margin-top:14px;align-self:flex-start;
+  font-size:11px;font-weight:800;letter-spacing:.14em;
+  text-decoration:none;color:inherit;
+  border:2px solid currentColor;border-radius:999px;padding:9px 18px;
+}
+.card .visit:hover{opacity:.6;}
+.card details{border-top:2px solid currentColor;padding-top:12px;margin-top:2px;}
+.card summary{
+  cursor:pointer;list-style:none;
+  font-size:11px;font-weight:800;letter-spacing:.14em;
+  display:flex;align-items:center;justify-content:space-between;
+}
+.card summary::-webkit-details-marker{display:none;}
+.card summary::after{content:"＋";font-size:15px;line-height:1;}
+.card details[open] summary::after{content:"−";}
+.card dl{margin-top:16px;display:grid;gap:14px;}
+.card dt{
+  font-size:10px;font-weight:800;letter-spacing:.16em;
+  border:2px solid currentColor;border-radius:999px;
+  padding:3px 10px;justify-self:start;margin-bottom:6px;opacity:.8;
+}
+.card dd{
+  font-family:"Zen Maru Gothic",sans-serif;
+  font-size:13.5px;font-weight:500;line-height:1.9;
+}
 .note{
   margin-top:26px;font-size:13px;font-weight:500;line-height:1.9;
   font-family:"Zen Maru Gothic",sans-serif;opacity:.6;
@@ -194,6 +276,14 @@ footer .wrap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
 </head>
 <body>
 
+<div id="loader">
+  <div class="ld-name" aria-label="NAOTARO">
+    <span style="animation-delay:.05s">N</span><span style="animation-delay:.11s">A</span><span style="animation-delay:.17s">O</span><span style="animation-delay:.23s">T</span><span style="animation-delay:.29s">A</span><span style="animation-delay:.35s">R</span><span style="animation-delay:.41s">O</span>
+  </div>
+  <div class="ld-bar"><i></i></div>
+  <div class="ld-tag">LOADING</div>
+</div>
+
 <header>
   <a href="#home" class="logo">NAOTARO</a>
   <nav>
@@ -206,35 +296,27 @@ footer .wrap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
 <!-- ===== HERO ===== -->
 <div class="hero" id="home">
   <div class="hero-left">
-    <svg viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="illustration">
-      <g stroke="#fff" stroke-width="13" stroke-linecap="round" stroke-linejoin="round">
-        <!-- spark -->
-        <path d="M300 62c8-14 22-14 30 0" fill="none"/>
-        <circle cx="348" cy="52" r="7" fill="#fff" stroke="none"/>
-        <!-- head -->
-        <circle cx="150" cy="120" r="58" fill="#fff"/>
-        <!-- hair -->
-        <path d="M92 120c0-32 26-58 58-58 20 0 37 10 47 25-18 6-30 16-38 30" fill="#000" stroke="#fff"/>
-        <!-- eyes -->
-        <path d="M132 118c5-6 13-6 18 0" fill="none" stroke="#000" stroke-width="9"/>
-        <path d="M168 118c5-6 13-6 18 0" fill="none" stroke="#000" stroke-width="9"/>
-        <!-- body -->
-        <path d="M78 300c0-40 32-72 72-72s72 32 72 72" fill="#fff"/>
-        <!-- laptop -->
-        <path d="M186 300h150l24-84H210l-24 84z" fill="#000" stroke="#fff"/>
-        <path d="M170 300h182" stroke="#fff"/>
-        <!-- code marks on screen -->
-        <path d="M244 244l-14 14 14 14" stroke="#fff" stroke-width="10"/>
-        <path d="M296 244l14 14-14 14" stroke="#fff" stroke-width="10"/>
-        <path d="M276 240l-12 36" stroke="#fff" stroke-width="10"/>
-        <!-- arm -->
-        <path d="M198 262c-16 6-26 20-26 38" fill="none"/>
-      </g>
+    <svg class="mark" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="NAOTARO mark">
+      <!-- 背面の枠（ゆっくり回転） -->
+      <rect class="frame-b" x="62" y="62" width="276" height="276" rx="76"
+            stroke="#fff" stroke-width="7" opacity=".35" fill="none"/>
+      <!-- 前面の枠 -->
+      <rect class="frame-a" x="52" y="52" width="296" height="296" rx="84"
+            stroke="#fff" stroke-width="14" fill="none"/>
+      <!-- N -->
+      <text x="200" y="206" text-anchor="middle" dominant-baseline="central"
+            font-family="Outfit, Helvetica, Arial, sans-serif" font-size="184"
+            font-weight="900" fill="#fff" letter-spacing="-6">N</text>
+      <!-- spark -->
+      <path d="M296 44q12-18 24 0" stroke="#fff" stroke-width="12" stroke-linecap="round" fill="none"/>
+      <circle cx="346" cy="34" r="8" fill="#fff"/>
+      <!-- accent dot -->
+      <circle class="orbit-dot" cx="56" cy="344" r="11" fill="#fff"/>
     </svg>
   </div>
 
   <div class="hero-right">
-    <div class="eyebrow">DEVELOPER / HIGH SCHOOL STUDENT</div>
+    <div class="eyebrow">BUILDER / HIGH SCHOOL STUDENT</div>
     <h1 class="hero-name">NAOTARO</h1>
     <p class="hero-sub">
       鎌田 直太朗<br>
@@ -267,23 +349,79 @@ footer .wrap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
 
     <div class="works">
       <article class="card">
-        <span class="tag">APP</span>
-        <h3>Project 01</h3>
-        <p>準備中です。作品名と、何を解決するためにつくったかをここに記載します。</p>
-      </article>
-      <article class="card">
-        <span class="tag">APP</span>
-        <h3>Project 02</h3>
-        <p>準備中です。作品名と、何を解決するためにつくったかをここに記載します。</p>
-      </article>
-      <article class="card">
+        <div class="thumb">
+          <!-- 写真ができたら↓のコメントを外して photo1.jpg を置き換えてください -->
+          <!-- <img src="photo1.jpg" alt="先生どこどこ表"> -->
+          PHOTO
+        </div>
         <span class="tag">IN PROGRESS</span>
-        <h3>Project 03</h3>
-        <p>現在つくっているもの。進行中のプロジェクトもここに載せていきます。</p>
+        <h3>先生どこどこ表</h3>
+        <p>先生が今どこにいるのかを、生徒がスマホから一目で確認できるようにする仕組み。開発中です。</p>
+        <details>
+          <summary>DETAIL</summary>
+          <dl>
+            <dt>課題</dt>
+            <dd>質問したいことや提出したいものがあって職員室に行っても、先生が席にいない。空き教室や別の校舎を探して回っているうちに、10分しかない休み時間が終わってしまう。生徒側だけでなく、何度も訪ねてこられる先生の側にとっても負担になっている。</dd>
+            <dt>つくっているもの</dt>
+            <dd>先生ごとの現在地を一覧で表示するページ。生徒はスマホから開くだけで、探しに行く前に居場所が分かる。</dd>
+            <dt>考えていること</dt>
+            <dd>先生に手間をかけさせた時点で使われなくなるため、更新の負担をどこまで小さくできるかが成否を分けると考えています。</dd>
+          </dl>
+        </details>
+        <div class="stack"><span>WEB</span><span>SCHOOL</span></div>
+      </article>
+
+      <article class="card">
+        <div class="thumb">
+          <!-- <img src="photo2.jpg" alt="LiveChat"> -->
+          PHOTO
+        </div>
+        <span class="tag">RELEASED</span>
+        <h3>LiveChat<br>イベント用コメントシステム</h3>
+        <p>QRコードを読むだけで、参加者がスマホから感想やスタンプを送れて、それが発表スクリーンに流れていくシステム。その場で投票を取ることもできます。</p>
+        <details>
+          <summary>DETAIL</summary>
+          <dl>
+            <dt>課題</dt>
+            <dd>トークイベントで、聞いている人が言いたいことを持っていても、手を挙げるハードルが高くて質疑応答が盛り上がらないまま終わる。せっかく人が集まっているのに、話す人と聞く人が完全に分かれてしまう。</dd>
+            <dt>つくったもの</dt>
+            <dd>参加者用の投稿ページ、会場スクリーンに映す発表画面、運営が操作する管理画面の3つで構成しています。参加者が送ったコメントやスタンプは発表画面を流れていき、運営側から選択式の投票を出すと、集計結果がその場でグラフとして表示されます。</dd>
+            <dt>工夫したこと</dt>
+            <dd>アカウント登録もアプリのインストールも必要にしませんでした。参加者にとって「面倒だな」と思う瞬間が一度でもあると、その時点で使われなくなるからです。運用費が個人の手に負える範囲に収まるよう、無料枠内で動く構成にしています。</dd>
+            <dt>これから</dt>
+            <dd>流れたコメントが数秒で消えてしまい、登壇者が拾いきれない点と、イベント終了後に振り返る画面がない点が課題として残っています。</dd>
+          </dl>
+        </details>
+        <div class="stack"><span>JAVASCRIPT</span><span>FIREBASE</span><span>GITHUB PAGES</span></div>
+        <a class="visit" href="https://naotaro713.github.io/livechat/" target="_blank" rel="noopener">VIEW SITE →</a>
+      </article>
+
+      <article class="card">
+        <div class="thumb">
+          <!-- <img src="photo3.jpg" alt="日記システム"> -->
+          PHOTO
+        </div>
+        <span class="tag">IN USE</span>
+        <h3>日記システム<br>Obsidian × Claude</h3>
+        <p>毎晩AIが質問を投げかけてくれて、答えるだけで日記が自動でノートアプリに保存される仕組み。書いた記録は週ごと・月ごとに自動でまとめられます。</p>
+        <details>
+          <summary>DETAIL</summary>
+          <dl>
+            <dt>課題</dt>
+            <dd>振り返りを続けたいのに、白紙のページを前にすると何を書けばいいか分からず手が止まる。数日空くと、そのまま書かなくなる。続かない原因は意志の弱さではなく、毎回ゼロから考えなければいけない設計そのものにあると考えました。</dd>
+            <dt>つくったもの</dt>
+            <dd>毎晩決まった時間にAIが5つの質問を投げかけます。今日の出来事、調子、学んだこと、起業に向けて進んだこと、明日やること。答えていくだけで日記が組み上がり、ノートアプリに自動で保存されます。</dd>
+            <dt>工夫したこと</dt>
+            <dd>保存する前に必ず下書きを見せて、自分の言葉のまま残すようにしました。AIに要約されると自分の記録ではなくなるためです。日次の記録は週次・月次へ自動でまとめられ、1年分を一気に振り返るページも生成されます。</dd>
+            <dt>使ってみて</dt>
+            <dd>質問に答えるだけの形にしたことで、書けない日がほとんどなくなりました。自分に必要なものを、自分の生活に合わせてつくれるのが個人開発の面白さだと感じています。</dd>
+          </dl>
+        </details>
+        <div class="stack"><span>OBSIDIAN</span><span>CLAUDE</span><span>MARKDOWN</span></div>
       </article>
     </div>
 
-    <p class="note">※ 作品の詳細ページは順次公開します。最新の状況は CONTACT からお問い合わせください。</p>
+    <p class="note">※ すべて自分で企画し、AIを使って開発しています。「DETAIL」を開くと、なぜつくったのかと中身の詳細が読めます。</p>
   </div>
 </section>
 
@@ -303,17 +441,20 @@ footer .wrap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
 
       <div class="prof-body">
         <p>
-          日本の高校生です。日常のなかで感じた不便や課題を、そのままにせず自分でアプリとしてかたちにすることを続けています。
+          日本の高校生です。年内に起業することを目標に、毎日なにかしらつくっています。
         </p>
         <p>
-          つくることそのものより、「誰の何が楽になるか」を考える時間を大切にしています。AIを開発の相棒として使いながら、思いついたものを最短で動く状態まで持っていくやり方を得意としています。
+          きっかけは大したことではなくて、「これ面倒だな」と思ったものを自分で直せると気づいたことでした。先生を探して校内を歩き回る時間。イベントで言いたいことがあったのに、手を挙げられないまま終わる人。そういう小さな引っかかりを、そのままにしないでいたいと思っています。
+        </p>
+        <p>
+          つくるときはAIを相棒にしています。ひとりなら何ヶ月もかかることが、いまは数日で動く形になる。その速さは、思いついたものを実際に人が使うところまで届けるために使いたいと考えています。
         </p>
 
         <ul class="facts">
           <li><span class="k">BASED IN</span><span class="v">日本</span></li>
-          <li><span class="k">STATUS</span><span class="v">高校生 / 個人開発</span></li>
-          <li><span class="k">FOCUS</span><span class="v">アプリ開発、AI活用、プロダクト企画</span></li>
-          <li><span class="k">OPEN TO</span><span class="v">制作のご依頼、共同開発、その他ご相談</span></li>
+          <li><span class="k">STATUS</span><span class="v">高校生 / 年内の起業を目標に活動中</span></li>
+          <li><span class="k">FOCUS</span><span class="v">起業、アプリ開発、AI活用、コミュニティデザイン</span></li>
+          <li><span class="k">LEARNING</span><span class="v">東京大学 松尾研究室<br>GCI講座 / AIエンジニアリング講座 修了</span></li>
         </ul>
       </div>
     </div>
@@ -348,6 +489,24 @@ footer .wrap{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;
     <span>LAST UPDATED 2026.08</span>
   </div>
 </footer>
+
+<script>
+document.body.classList.add('loading');
+(function(){
+  var loader = document.getElementById('loader');
+  var start = Date.now();
+  function hide(){
+    var wait = Math.max(0, 1700 - (Date.now() - start)); // 演出を最後まで見せる
+    setTimeout(function(){
+      loader.classList.add('done');
+      document.body.classList.remove('loading');
+    }, wait);
+  }
+  if (document.readyState === 'complete') hide();
+  else window.addEventListener('load', hide);
+  setTimeout(hide, 4000); // 保険：読み込みが遅くても必ず解除
+})();
+</script>
 
 </body>
 </html>
