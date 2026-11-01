@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>NIKKI — 質問に答えるだけの日記</title>
 <meta name="description" content="毎晩の質問に答えるだけで日記が組み上がり、Obsidian 形式で書き出せる日記アプリ。データはこの端末のブラウザ内にのみ保存されます。">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -41,6 +41,12 @@ header .wrap{display:flex;align-items:center;justify-content:space-between;heigh
 .logo{font-size:24px;font-weight:900;letter-spacing:-.02em;}
 .logo small{font-size:10px;letter-spacing:.24em;margin-left:8px;color:var(--mute);font-weight:800;}
 .today-label{font-size:12px;letter-spacing:.1em;color:var(--mute);}
+.hdr-r{text-align:right;}
+.sync{font-size:10px;letter-spacing:.12em;color:var(--mute);margin-top:2px;}
+.sync::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;vertical-align:1px;border:1.5px solid var(--ink);}
+.sync.cloud::before{background:var(--ink);}
+#askM{z-index:150;align-items:center;}
+#askM .sheet{border-radius:22px;max-width:440px;margin:0 16px;}
 
 /* tabs (bottom) */
 nav.tabs{
@@ -220,7 +226,7 @@ table.terms input{padding:8px 10px;font-size:13px;border-radius:10px;}
 <header>
   <div class="wrap">
     <div class="logo">NIKKI<small>DIARY</small></div>
-    <div class="today-label" id="todayLabel"></div>
+    <div class="hdr-r"><div class="today-label" id="todayLabel"></div><div class="sync" id="syncLabel"></div></div>
   </div>
 </header>
 
@@ -243,6 +249,7 @@ table.terms input{padding:8px 10px;font-size:13px;border-radius:10px;}
 </nav>
 
 <div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
+<div class="modal" id="askM"><div class="sheet" id="askS"></div></div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -289,10 +296,100 @@ function load(){
   }catch(e){ console.error(e); return defaultState(); }
 }
 let S = load();
+
+/* ---------- cloud (claude.ai artifact: db capability) ----------
+   claude.ai 上で開いたときは、本人だけが読める data/users/<id>/ に保存する。
+   それ以外（GitHub Pages・ローカル）は localStorage のみ。 */
+const CLOUD = { col:null, synced:new Map(), timer:null, chain:Promise.resolve(), retry:false };
+let DL = null, SAMPLE = null, IN_CLAUDE = false, syncState = "local";
+function toDocs(st){
+  const m = {};
+  for(const [d,e] of Object.entries(st.entries)) m["entry-"+d] = {v:e};
+  for(const [w,r] of Object.entries(st.reviews)) m["review-"+w] = {v:r};
+  m.settings = {v:st.settings};
+  if(st.draft) m.draft = {v:st.draft};
+  return m;
+}
+function fromDocs(docs){
+  const st = defaultState();
+  for(const [id,body] of Object.entries(docs)){
+    const v = body && body.v; if(v == null) continue;
+    if(id.startsWith("entry-")) st.entries[id.slice(6)] = v;
+    else if(id.startsWith("review-")) st.reviews[id.slice(7)] = v;
+    else if(id === "settings") st.settings = {...st.settings, ...v};
+    else if(id === "draft") st.draft = v;
+  }
+  return st;
+}
 function save(){
   try{ localStorage.setItem(STORE_KEY, JSON.stringify(S)); }
-  catch(e){ toast("保存に失敗しました。ブラウザの容量を確認してください。"); }
+  catch(e){ if(!CLOUD.col) toast("保存に失敗しました。ブラウザの容量を確認してください。"); }
+  if(CLOUD.col){ clearTimeout(CLOUD.timer); CLOUD.timer = setTimeout(syncCloud, 800); }
 }
+function syncCloud(){
+  if(!CLOUD.col) return;
+  const docs = toDocs(S), ops = [];
+  for(const [id,body] of Object.entries(docs)){ const j = JSON.stringify(body); if(CLOUD.synced.get(id) !== j) ops.push([id,j]); }
+  for(const id of [...CLOUD.synced.keys()]) if(!(id in docs)) ops.push([id,null]);
+  if(!ops.length) return;
+  setSync("saving");
+  for(const [id,j] of ops){
+    CLOUD.chain = CLOUD.chain.then(async () => {
+      if(!CLOUD.col) return;
+      try{
+        if(j){ await CLOUD.col.doc(id).set(JSON.parse(j)); CLOUD.synced.set(id,j); }
+        else { await CLOUD.col.doc(id).delete(); CLOUD.synced.delete(id); }
+      }catch(err){ cloudError(err); }
+    });
+  }
+  CLOUD.chain = CLOUD.chain.then(() => { if(CLOUD.col && syncState === "saving") setSync("cloud"); });
+}
+function cloudError(err){
+  const code = err && err.code;
+  if(code === "quota_exceeded"){ setSync("error"); toast("クラウドの保存容量を超えました。この端末には保存されています。"); }
+  else if(code === "unavailable" || code === "resource_exhausted"){
+    setSync("error");
+    if(!CLOUD.retry){ CLOUD.retry = true; setTimeout(() => { CLOUD.retry = false; syncCloud(); }, 4000 + Math.random()*2000); }
+  }
+  else { CLOUD.col = null; setSync("local"); }
+}
+function setSync(st){
+  syncState = st;
+  const el = $("#syncLabel"); if(!el) return;
+  const label = {local:"この端末に保存", connecting:"接続中", cloud:"クラウドに保存済み", saving:"保存中", error:"クラウド保存に失敗（端末には保存済み）", offline:"クラウドに接続できません"}[st] || "";
+  el.textContent = label; el.className = "sync" + (st === "cloud" || st === "saving" ? " cloud" : "");
+}
+async function initCloud(){
+  for(let i = 0; i < 15 && !(window.claude && typeof window.claude.use === "function"); i++) await new Promise(r => setTimeout(r, 200));
+  if(!(window.claude && typeof window.claude.use === "function")) return;
+  IN_CLAUDE = true; setSync("connecting");
+  claude.use("downloads").then(d => { DL = d; softRefresh(); });
+  claude.use("sample").then(sm => { SAMPLE = sm; softRefresh(); });
+  const [db, user] = await Promise.all([claude.use("db"), claude.use("user")]);
+  const uid = user ? await user.id() : null;
+  if(!db || !uid){ setSync("local"); softRefresh(); return; }
+  const col = db.collection("data/users/" + uid);
+  const timer = setTimeout(() => setSync("offline"), 10000);
+  try{
+    const snap = await col.get();
+    clearTimeout(timer);
+    const docs = {};
+    snap.docs.forEach(d => { if(d.exists) docs[d.id] = d.data(); });
+    CLOUD.synced = new Map(Object.entries(docs).map(([k,v]) => [k, JSON.stringify(v)]));
+    const remote = fromDocs(docs);
+    // クラウド側を優先し、端末にしかない記録はクラウドへ送る
+    S = {...S,
+      entries:{...S.entries, ...remote.entries},
+      reviews:{...S.reviews, ...remote.reviews},
+      settings: docs.settings ? remote.settings : S.settings,
+      draft: docs.draft ? remote.draft : S.draft};
+    CLOUD.col = col; setSync("cloud");
+    save(); softRefresh();
+  }catch(err){ clearTimeout(timer); setSync("local"); softRefresh(); }
+}
+document.addEventListener("visibilitychange", () => {
+  if(document.visibilityState === "hidden" && CLOUD.col){ clearTimeout(CLOUD.timer); syncCloud(); }
+});
 
 /* ---------- utils ---------- */
 const $ = (sel,root=document) => root.querySelector(sel);
@@ -301,7 +398,18 @@ function toast(msg){
   const t = $("#toast"); t.textContent = msg; t.classList.add("on");
   clearTimeout(toast._t); toast._t = setTimeout(()=>t.classList.remove("on"), 2400);
 }
-function download(name, content, type="text/markdown;charset=utf-8"){
+async function download(name, content, type="text/markdown;charset=utf-8"){
+  if(DL){
+    try{ await DL.save({filename:name, data:content}); }
+    catch(e){
+      if(e && e.code === "declined") return;
+      if(e && (e.code === "rejected_extension" || e.code === "extension_not_enabled")) toast("この形式はこの画面では保存できません。");
+      else if(e && e.code === "rate_limited") toast("保存の確認画面が開いています。少し待ってから試してください。");
+      else toast("書き出せませんでした。コピーを使ってください。");
+    }
+    return;
+  }
+  if(IN_CLAUDE){ toast("この画面ではファイルを書き出せません。コピーを使ってください。"); return; }
   const blob = content instanceof Blob ? content : new Blob([content], {type});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob); a.download = name;
@@ -314,6 +422,32 @@ async function copyText(text, okMsg){
     const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta);
     ta.select(); document.execCommand("copy"); ta.remove(); toast(okMsg || "コピーしました");
   }
+}
+function ask(msg, {ok="OK", cancel="やめる", danger=false, input=null} = {}){
+  return new Promise(res => {
+    $("#askS").innerHTML = `<p style="white-space:pre-wrap;line-height:1.8;font-weight:500;margin-bottom:16px">${esc(msg)}</p>
+      ${input ? `<input type="text" id="askIn" placeholder="${esc(input)}" style="margin-bottom:16px">` : ""}
+      <div class="row end"><button class="btn ghost" id="askNo">${esc(cancel)}</button><button class="btn ${danger?"danger":""}" id="askYes">${esc(ok)}</button></div>`;
+    const m = $("#askM"); m.classList.add("on");
+    const done = v => { m.classList.remove("on"); res(v); };
+    $("#askNo").onclick = () => done(input ? null : false);
+    $("#askYes").onclick = () => done(input ? $("#askIn").value : true);
+    (input ? $("#askIn") : $("#askYes")).focus();
+  });
+}
+async function runSample(prompt, ta, btn, onDone){
+  if(!SAMPLE) return;
+  const label = btn.textContent; btn.disabled = true; btn.textContent = "作成中";
+  try{
+    const r = await SAMPLE(prompt, {onText: ({text}) => { ta.value = text; }, cache:false});
+    ta.value = r.text; onDone(r.text);
+  }catch(e){
+    const code = e && e.code;
+    if(code === "not_granted"){ SAMPLE = null; toast("この画面では Claude に依頼できません。依頼文のコピーを使ってください。"); }
+    else if(code === "rate_limited") toast("混み合っています。少し時間をおいてから試してください。");
+    else toast("作成できませんでした。依頼文のコピーを使ってください。");
+    if(e && e.text){ ta.value = e.text; onDone(e.text); }
+  }finally{ btn.disabled = false; btn.textContent = label; }
 }
 function applyTerms(text){
   let out = text || "";
@@ -490,7 +624,7 @@ function renderStart(el){
   `;
   el.querySelectorAll(".mode").forEach(b => b.onclick = () => { W = newSession(today, b.dataset.mode); persistDraft(); renderWrite(); });
   $("#resume", el) && ($("#resume", el).onclick = () => { W = S.draft; renderWrite(); });
-  $("#discard", el) && ($("#discard", el).onclick = () => { if(confirm("書きかけの内容を破棄しますか。")){ S.draft = null; save(); renderWrite(); } });
+  $("#discard", el) && ($("#discard", el).onclick = async () => { if(await ask("書きかけの内容を破棄しますか。", {ok:"破棄する", danger:true})){ S.draft = null; save(); renderWrite(); } });
   $("#openToday", el) && ($("#openToday", el).onclick = () => openEntry(today));
   $("#writeYest", el) && ($("#writeYest", el).onclick = () => { W = newSession(yest, "short"); persistDraft(); renderWrite(); });
   $("#otherDate", el).onclick = pickDateModal;
@@ -508,9 +642,9 @@ function pickDateModal(){
   document.querySelectorAll("#pm button").forEach(b => b.onclick = () => {
     mode = b.dataset.m; document.querySelectorAll("#pm button").forEach(x=>x.classList.toggle("on", x===b));
   });
-  $("#pdGo").onclick = () => {
+  $("#pdGo").onclick = async () => {
     const d = $("#pd").value; if(!d) return;
-    if(S.entries[d] && !confirm(`${jpDate(d)}の日記は既にあります。書き直しますか（保存時に上書きされます）。`)) return;
+    if(S.entries[d] && !(await ask(`${jpDate(d)}の日記は既にあります。書き直しますか（保存時に上書きされます）。`, {ok:"書き直す"}))) return;
     closeModal(); W = newSession(d, mode); persistDraft(); switchTab("write");
   };
 }
@@ -648,8 +782,12 @@ function renderDraft(el){
     <div class="card" id="dBody"></div>
     <div class="card gray">
       <h3>フィードバック（任意）</h3>
-      <p class="note">このアプリはAIを内蔵していません。下のボタンで、日記本文とフィードバックの条件をまとめた依頼文をコピーできます。Claude に貼り付け、返ってきた文章を下の欄に貼ると、日記の末尾に「フィードバック」として追記されます。</p>
-      <div class="row" style="margin:12px 0"><button class="btn ghost small" id="copyPrompt">Claude への依頼文をコピー</button></div>
+      ${SAMPLE ? `<p class="note">日記本文を Claude に送り、フィードバックを作ってもらいます。返ってきた文章は下の欄で直せます。欄に残した内容だけが、日記の末尾に「フィードバック」として追記されます。</p>`
+        : `<p class="note">下のボタンで、日記本文とフィードバックの条件をまとめた依頼文をコピーできます。Claude に貼り付け、返ってきた文章を下の欄に貼ると、日記の末尾に「フィードバック」として追記されます。</p>`}
+      <div class="row" style="margin:12px 0">
+        ${SAMPLE ? `<button class="btn small" id="genFb">Claude にフィードバックを作ってもらう</button>` : ""}
+        <button class="btn ghost small" id="copyPrompt">依頼文をコピー</button>
+      </div>
       <textarea id="fb" placeholder="返ってきたフィードバックをここに貼り付け（空欄なら追記しません）">${esc(W.feedback||"")}</textarea>
     </div>
     <div class="row between">
@@ -672,8 +810,9 @@ function renderDraft(el){
   });
   $("#fb").oninput = e => { W.feedback = e.target.value; persistDraft(); };
   $("#copyPrompt").onclick = () => copyText(dailyPrompt(W.markdown), "依頼文をコピーしました。Claude に貼り付けてください。");
-  $("#backQ").onclick = () => {
-    if(!confirm("質問に戻ると、直接編集した内容は回答から作り直されます。戻りますか。")) return;
+  $("#genFb") && ($("#genFb").onclick = () => runSample(dailyPrompt(W.markdown), $("#fb"), $("#genFb"), t => { W.feedback = t; persistDraft(); }));
+  $("#backQ").onclick = async () => {
+    if(!(await ask("質問に戻ると、直接編集した内容は回答から作り直されます。戻りますか。", {ok:"戻る"}))) return;
     W.stage = "chat"; W.i = FLOW[W.mode].length-1; persistDraft(); renderWrite();
   };
   $("#approve").onclick = () => {
@@ -694,7 +833,7 @@ function renderDone(el){
     <h2 class="sec">SAVED</h2>
     <div class="card">
       <h3>${esc(jpDate(W.date))}の日記を保存しました</h3>
-      <p class="note">保存先はこの端末のブラウザ内です。Obsidian に入れる場合は、下のボタンで .md ファイルを書き出すか、「設定」からまとめて書き出してください。</p>
+      <p class="note">${CLOUD.col ? "保存先はクラウド（自分だけが読める領域）です。" : "保存先はこの端末のブラウザ内です。"}Obsidian に入れる場合は、下のボタンで .md ファイルを書き出すか、「設定」からまとめて書き出してください。</p>
       <p class="note" style="margin-top:6px">ファイル名：日記/${mondayOf(W.date)}週/${W.date}.md</p>
       <div class="row" style="margin-top:12px">
         <button class="btn" id="dl">.md を書き出す</button>
@@ -799,8 +938,8 @@ function openEntry(date){
   $("#eDl").onclick = () => download(`${date}.md`, e.markdown);
   $("#eCp").onclick = () => copyText(e.markdown);
   $("#eFb").onclick = () => copyText(dailyPrompt(e.markdown), "依頼文をコピーしました。返答は「編集」から末尾に追記できます。");
-  $("#eDel").onclick = () => {
-    if(!confirm(`${jpDate(date)}の日記を削除します。元に戻せません。よろしいですか。`)) return;
+  $("#eDel").onclick = async () => {
+    if(!(await ask(`${jpDate(date)}の日記を削除します。元に戻せません。よろしいですか。`, {ok:"削除する", danger:true}))) return;
     delete S.entries[date]; save(); closeModal(); refreshAll(); toast("削除しました");
   };
   $("#eEdit").onclick = () => {
@@ -904,10 +1043,13 @@ function renderWeek(body){
     ${kept.length ? `<div class="card"><h3>そのままの言葉</h3><ul class="list-plain">${kept.map(k=>`<li><span class="d">${shortDate(k.d)}</span>${esc(k.text)}</li>`).join("")}</ul></div>` : ""}
     <div class="card gray">
       <h3>週次レビューをつくる</h3>
-      <p class="note">数値と記録の集計はこのアプリが行います。解釈は自分で書くか、Claude に依頼してください。依頼文には今週の日記がすべて含まれます。</p>
+      <p class="note">数値と記録の集計はこのアプリが行います。解釈は自分で書くか、Claude に依頼してください。Claude には今週の日記がすべて送られます。</p>
       <label class="f">自分の振り返りメモ</label>
       <textarea id="wMemo" placeholder="今週を一言で表すと／来週変えること">${esc(rv.memo)}</textarea>
-      <div class="row" style="margin:12px 0"><button class="btn ghost small" id="wPrompt" ${recorded.length?"":"disabled"}>Claude への依頼文をコピー</button></div>
+      <div class="row" style="margin:12px 0">
+        ${SAMPLE ? `<button class="btn small" id="wGen" ${recorded.length?"":"disabled"}>Claude に分析してもらう</button>` : ""}
+        <button class="btn ghost small" id="wPrompt" ${recorded.length?"":"disabled"}>依頼文をコピー</button>
+      </div>
       <label class="f">Claude からの分析（貼り付け）</label>
       <textarea id="wFb" placeholder="返ってきた分析をここに貼り付け">${esc(rv.feedback)}</textarea>
       <div class="row end" style="margin-top:12px">
@@ -920,6 +1062,7 @@ function renderWeek(body){
   const store = () => { S.reviews[w] = {memo:$("#wMemo").value, feedback:$("#wFb").value}; save(); };
   $("#wMemo").oninput = store; $("#wFb").oninput = store;
   $("#wPrompt").onclick = () => copyText(weeklyPrompt(w), "依頼文をコピーしました。Claude に貼り付けてください。");
+  $("#wGen") && ($("#wGen").onclick = () => runSample(weeklyPrompt(w), $("#wFb"), $("#wGen"), () => store()));
   $("#wDl").onclick = () => download(`${w}_週次レビュー.md`, weeklyMarkdown(w));
 }
 
@@ -1068,10 +1211,11 @@ function renderSettings(){
 
     <div class="card">
       <h3>毎晩のリマインダー</h3>
-      <p class="note">このアプリはブラウザだけで動くため、自分から通知を送ることはできません。代わりに、毎日決まった時刻に繰り返す予定（.ics）を書き出せます。Google カレンダーや iPhone のカレンダーに取り込むと、その時刻に通知が届きます。</p>
+      ${IN_CLAUDE ? `<p class="note">このアプリは自分から通知を送れません。また、この画面ではカレンダー用のファイル（.ics）を保存できません。Claude とのチャットで「毎晩21時に『日記を書く』という繰り返し予定を Google カレンダーに入れて」と頼むと、カレンダーの通知で代用できます。</p>`
+      : `<p class="note">このアプリはブラウザだけで動くため、自分から通知を送ることはできません。代わりに、毎日決まった時刻に繰り返す予定（.ics）を書き出せます。Google カレンダーや iPhone のカレンダーに取り込むと、その時刻に通知が届きます。</p>
       <label class="f">時刻</label>
       <input type="time" id="rTime" value="${esc(S.settings.reminder)}" style="max-width:180px">
-      <div class="row" style="margin-top:12px"><button class="btn" id="rIcs">リマインダー（.ics）を書き出す</button></div>
+      <div class="row" style="margin-top:12px"><button class="btn" id="rIcs">リマインダー（.ics）を書き出す</button></div>`}
     </div>
 
     <div class="card">
@@ -1091,7 +1235,7 @@ function renderSettings(){
 
     <div class="card">
       <h3>バックアップ</h3>
-      <p class="note">データはこの端末のこのブラウザにだけ保存されています。ブラウザのデータを消すと日記も消えるため、定期的にバックアップを書き出してください。別の端末に移すときも、このファイルを読み込みます。</p>
+      <p class="note">${CLOUD.col ? "日記はクラウドに保存されているため、ブラウザのデータを消しても残ります。念のため、ときどきバックアップを書き出しておくと安全です。" : "データはこの端末のこのブラウザにだけ保存されています。ブラウザのデータを消すと日記も消えるため、定期的にバックアップを書き出してください。別の端末に移すときも、このファイルを読み込みます。"}</p>
       <div class="row" style="margin-top:12px">
         <button class="btn" id="bk">バックアップ（.json）を書き出す</button>
         <label class="btn ghost" style="cursor:pointer">読み込む<input type="file" id="imp" accept="application/json,.json" hidden></label>
@@ -1100,12 +1244,15 @@ function renderSettings(){
 
     <div class="card">
       <h3>データについて</h3>
-      <p class="note">日記の内容が外部のサーバーに送信されることはありません。Claude への依頼文はクリップボードにコピーされるだけで、貼り付けるかどうかは自分で決められます。</p>
+      <p class="note">${CLOUD.col
+        ? "日記は claude.ai の、自分のアカウントだけが読める領域に保存されています。このページを他の人に共有しても、その人から日記は見えません。Claude に送られるのは、フィードバックや分析のボタンを押したときだけです。"
+        : IN_CLAUDE ? "クラウドに接続できていないため、この端末のブラウザにだけ保存しています。Claude に送られるのは、フィードバックや分析のボタンを押したときだけです。"
+        : "日記の内容が外部のサーバーに送信されることはありません。Claude への依頼文はクリップボードにコピーされるだけで、貼り付けるかどうかは自分で決められます。"}</p>
       <div class="row" style="margin-top:12px"><button class="btn danger small" id="wipe">すべてのデータを削除</button></div>
     </div>
   `;
-  $("#rTime").onchange = e => { S.settings.reminder = e.target.value || "21:00"; save(); };
-  $("#rIcs").onclick = () => download("nikki-reminder.ics", buildIcs(S.settings.reminder), "text/calendar;charset=utf-8");
+  $("#rTime") && ($("#rTime").onchange = e => { S.settings.reminder = e.target.value || "21:00"; save(); });
+  $("#rIcs") && ($("#rIcs").onclick = () => download("nikki-reminder.ics", buildIcs(S.settings.reminder), "text/calendar;charset=utf-8"));
   $("#zip").onclick = exportZip;
   el.querySelectorAll("[data-t]").forEach(inp => inp.oninput = () => { S.settings.terms[+inp.dataset.t][+inp.dataset.c] = inp.value; save(); });
   el.querySelectorAll("[data-del]").forEach(b => b.onclick = () => { S.settings.terms.splice(+b.dataset.del,1); save(); renderSettings(); });
@@ -1117,8 +1264,8 @@ function renderSettings(){
       const data = JSON.parse(await f.text());
       if(!data || typeof data.entries !== "object") throw new Error("形式が違います");
       const n = Object.keys(data.entries).length;
-      const mode = confirm(`${n}日分の日記が含まれています。\n\nOK：今のデータと統合する（同じ日付は読み込んだ側で上書き）\nキャンセル：読み込みをやめる`);
-      if(!mode) return;
+      const ok = await ask(`${n}日分の日記が含まれています。今のデータと統合しますか。同じ日付の日記は、読み込んだ側で上書きされます。`, {ok:"統合する"});
+      if(!ok){ e.target.value = ""; return; }
       S.entries = {...S.entries, ...data.entries};
       S.reviews = {...S.reviews, ...(data.reviews||{})};
       if(data.settings) S.settings = {...S.settings, ...data.settings};
@@ -1126,10 +1273,10 @@ function renderSettings(){
     }catch(err){ toast("読み込めませんでした。バックアップファイルか確認してください。"); }
     e.target.value = "";
   };
-  $("#wipe").onclick = () => {
-    if(!confirm("すべての日記と設定を削除します。元に戻せません。")) return;
-    if(prompt("確認のため「削除」と入力してください。") !== "削除") return;
-    localStorage.removeItem(STORE_KEY); S = defaultState(); W = null; refreshAll(); toast("削除しました");
+  $("#wipe").onclick = async () => {
+    const v = await ask("すべての日記と設定を削除します。元に戻せません。確認のため「削除」と入力してください。", {ok:"削除する", danger:true, input:"削除"});
+    if(v !== "削除"){ if(v !== null) toast("入力が一致しないため、削除しませんでした。"); return; }
+    S = defaultState(); W = null; save(); refreshAll(); toast("削除しました");
   };
 }
 
@@ -1221,8 +1368,16 @@ function refreshAll(){
   if(currentTab === "settings") renderSettings();
 }
 document.querySelectorAll("nav.tabs button").forEach(b => b.onclick = () => switchTab(b.dataset.tab));
+// 入力中の画面は作り直さない（フォーカスと入力位置を守る）
+function softRefresh(){
+  if(currentTab === "write" && W && W.stage === "chat") return;
+  if($("#modal").classList.contains("on") || $("#askM").classList.contains("on")) return;
+  refreshAll();
+}
 $("#todayLabel").textContent = jpDate(todayStr());
+setSync("local");
 renderWrite();
+initCloud();
 </script>
 </body>
 </html>
