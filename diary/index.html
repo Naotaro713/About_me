@@ -1,0 +1,1228 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>NIKKI — 質問に答えるだけの日記</title>
+<meta name="description" content="毎晩の質問に答えるだけで日記が組み上がり、Obsidian 形式で書き出せる日記アプリ。データはこの端末のブラウザ内にのみ保存されます。">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#000000">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%23000'/%3E%3Ctext x='50' y='50' font-family='Helvetica,Arial,sans-serif' font-size='62' font-weight='bold' fill='%23fff' text-anchor='middle' dominant-baseline='central'%3E%E6%97%A5%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#000;
+  --paper:#fff;
+  --gray:#f2f2f2;
+  --line:#dcdcdc;
+  --mute:#6b6b6b;
+  --radius:18px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{
+  background:var(--paper);color:var(--ink);
+  font-family:"Outfit","Zen Maru Gothic",-apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;
+  font-weight:700;-webkit-font-smoothing:antialiased;
+  min-height:100svh;
+  padding-bottom:calc(84px + env(safe-area-inset-bottom));
+}
+button,input,textarea,select{font:inherit;color:inherit;}
+button{cursor:pointer;}
+.wrap{max-width:720px;margin:0 auto;padding:0 18px;}
+
+/* header */
+header{
+  position:sticky;top:0;z-index:50;background:var(--paper);
+  border-bottom:2px solid var(--ink);
+}
+header .wrap{display:flex;align-items:center;justify-content:space-between;height:60px;}
+.logo{font-size:24px;font-weight:900;letter-spacing:-.02em;}
+.logo small{font-size:10px;letter-spacing:.24em;margin-left:8px;color:var(--mute);font-weight:800;}
+.today-label{font-size:12px;letter-spacing:.1em;color:var(--mute);}
+
+/* tabs (bottom) */
+nav.tabs{
+  position:fixed;left:0;right:0;bottom:0;z-index:60;
+  background:var(--ink);
+  padding:10px 10px calc(10px + env(safe-area-inset-bottom));
+  display:flex;justify-content:center;gap:6px;
+}
+nav.tabs button{
+  flex:1;max-width:160px;
+  background:transparent;color:var(--paper);border:none;
+  font-size:12px;font-weight:800;letter-spacing:.12em;
+  padding:12px 6px;border-radius:999px;opacity:.6;
+}
+nav.tabs button.on{background:var(--paper);color:var(--ink);opacity:1;}
+
+section.view{display:none;padding:24px 0 40px;}
+section.view.on{display:block;}
+
+h2.sec{font-size:13px;letter-spacing:.24em;font-weight:900;margin:8px 0 16px;}
+h3{font-size:18px;font-weight:900;margin-bottom:10px;}
+p.note{font-size:12px;color:var(--mute);line-height:1.8;font-weight:500;}
+
+/* buttons */
+.btn{
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;
+  background:var(--ink);color:var(--paper);border:2px solid var(--ink);
+  font-size:13px;font-weight:800;letter-spacing:.08em;
+  padding:12px 20px;border-radius:999px;
+  transition:transform .15s ease, opacity .15s ease;
+}
+.btn:hover{transform:translateY(-1px);opacity:.85;}
+.btn:disabled{opacity:.3;cursor:not-allowed;transform:none;}
+.btn.ghost{background:var(--paper);color:var(--ink);}
+.btn.small{font-size:11px;padding:8px 14px;}
+.btn.danger{background:var(--paper);color:#b00020;border-color:#b00020;}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.row.end{justify-content:flex-end;}
+.row.between{justify-content:space-between;}
+
+.card{
+  border:2px solid var(--ink);border-radius:var(--radius);
+  padding:18px;margin-bottom:14px;background:var(--paper);
+}
+.card.gray{background:var(--gray);border-color:var(--gray);}
+
+input[type=text],input[type=date],input[type=time],textarea,select{
+  width:100%;border:2px solid var(--ink);border-radius:14px;
+  padding:12px 14px;font-weight:500;font-size:15px;background:var(--paper);
+  outline:none;
+}
+textarea{resize:vertical;min-height:96px;line-height:1.7;}
+input:focus,textarea:focus{box-shadow:0 0 0 3px rgba(0,0,0,.15);}
+label.f{display:block;font-size:11px;letter-spacing:.14em;margin:12px 0 6px;color:var(--mute);}
+
+/* start */
+.mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px;}
+.mode{
+  text-align:left;border:2px solid var(--ink);border-radius:var(--radius);
+  background:var(--paper);padding:16px;
+}
+.mode b{display:block;font-size:17px;font-weight:900;margin-bottom:6px;}
+.mode span{font-size:12px;color:var(--mute);font-weight:500;line-height:1.6;}
+.mode:hover{background:var(--ink);color:var(--paper);}
+.mode:hover span{color:#ccc;}
+
+/* chat */
+.chat{display:flex;flex-direction:column;gap:12px;}
+.bubble{max-width:88%;padding:13px 16px;border-radius:18px;line-height:1.75;font-size:15px;white-space:pre-wrap;word-break:break-word;}
+.bubble.q{background:var(--gray);align-self:flex-start;border-bottom-left-radius:6px;font-weight:700;}
+.bubble.q .step{display:block;font-size:10px;letter-spacing:.2em;color:var(--mute);margin-bottom:4px;}
+.bubble.q .hint{display:block;font-size:12px;color:var(--mute);font-weight:500;margin-top:6px;}
+.bubble.a{background:var(--ink);color:var(--paper);align-self:flex-end;border-bottom-right-radius:6px;font-weight:500;}
+.a-wrap{display:flex;flex-direction:column;align-items:flex-end;gap:4px;}
+.keep{
+  background:none;border:1.5px solid var(--line);border-radius:999px;
+  font-size:10px;letter-spacing:.1em;padding:4px 10px;color:var(--mute);
+}
+.keep.on{border-color:var(--ink);background:var(--ink);color:var(--paper);}
+.composer{margin-top:16px;border-top:2px solid var(--ink);padding-top:16px;}
+.scale{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:10px;}
+.scale button{
+  border:2px solid var(--ink);background:var(--paper);border-radius:14px;
+  padding:12px 0;font-size:20px;font-weight:900;
+}
+.scale button.on{background:var(--ink);color:var(--paper);}
+.scale-cap{display:flex;justify-content:space-between;font-size:10px;color:var(--mute);letter-spacing:.1em;margin-bottom:8px;}
+.todo-in{display:flex;gap:8px;align-items:center;margin-bottom:8px;}
+.todo-in span{font-size:12px;width:16px;color:var(--mute);}
+.check-list label{display:flex;gap:10px;align-items:flex-start;padding:8px 0;font-weight:500;line-height:1.6;cursor:pointer;}
+.check-list input{width:20px;height:20px;margin-top:2px;accent-color:#000;flex:none;}
+
+/* markdown preview */
+.md{font-weight:500;line-height:1.85;font-size:15px;}
+.md h1{font-size:22px;font-weight:900;margin:4px 0 14px;}
+.md h2{font-size:15px;font-weight:900;margin:20px 0 6px;padding-bottom:4px;border-bottom:2px solid var(--ink);}
+.md ul{list-style:none;padding-left:0;}
+.md li{padding-left:16px;position:relative;margin:3px 0;}
+.md li::before{content:"";position:absolute;left:2px;top:.8em;width:6px;height:6px;border-radius:50%;background:var(--ink);}
+.md li.task::before{display:none;}
+.md li.task{padding-left:26px;}
+.md li.task i{position:absolute;left:0;top:.35em;width:16px;height:16px;border:2px solid var(--ink);border-radius:4px;}
+.md li.task.done i{background:var(--ink);}
+.md li.task.done{color:var(--mute);text-decoration:line-through;}
+.md blockquote{border-left:4px solid var(--ink);padding:4px 12px;margin:6px 0;background:var(--gray);border-radius:0 10px 10px 0;}
+.md mark{background:#000;color:#fff;padding:0 4px;border-radius:4px;}
+.md hr{border:none;border-top:1px dashed var(--line);margin:18px 0 10px;}
+.md .wl{border-bottom:1.5px dotted var(--ink);}
+.md p{margin:4px 0;}
+
+.seg{display:inline-flex;border:2px solid var(--ink);border-radius:999px;padding:3px;gap:3px;margin-bottom:16px;}
+.seg button{border:none;background:none;border-radius:999px;padding:8px 16px;font-size:12px;font-weight:800;letter-spacing:.1em;}
+.seg button.on{background:var(--ink);color:var(--paper);}
+
+/* records */
+.week-h{font-size:12px;letter-spacing:.16em;color:var(--mute);margin:20px 0 8px;}
+.entry-row{
+  display:flex;gap:14px;align-items:center;width:100%;text-align:left;
+  border:2px solid var(--ink);border-radius:14px;background:var(--paper);
+  padding:12px 14px;margin-bottom:8px;
+}
+.entry-row:hover{background:var(--gray);}
+.entry-row .d{font-size:13px;font-weight:900;min-width:84px;}
+.entry-row .t{flex:1;font-size:13px;font-weight:500;color:var(--mute);overflow:hidden;white-space:nowrap;text-overflow:ellipsis;}
+.mood-pill{
+  min-width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:900;border:2px solid var(--ink);
+}
+.empty{border:2px dashed var(--line);border-radius:var(--radius);padding:28px;text-align:center;color:var(--mute);font-size:13px;font-weight:500;line-height:1.8;}
+
+/* review */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px;}
+.stat{border:2px solid var(--ink);border-radius:var(--radius);padding:14px;}
+.stat .k{font-size:10px;letter-spacing:.16em;color:var(--mute);}
+.stat .v{font-size:28px;font-weight:900;margin-top:4px;letter-spacing:-.02em;}
+.stat .v small{font-size:13px;color:var(--mute);margin-left:2px;}
+.stat .s{font-size:11px;color:var(--mute);font-weight:500;margin-top:2px;}
+.chart svg{width:100%;height:auto;display:block;}
+.chart text{font-family:inherit;font-size:20px;fill:var(--mute);font-weight:700;}
+.list-plain{list-style:none;}
+.list-plain li{padding:10px 0;border-bottom:1px solid var(--line);font-weight:500;font-size:14px;line-height:1.7;}
+.list-plain li:last-child{border-bottom:none;}
+.list-plain .d{font-size:11px;color:var(--mute);font-weight:800;letter-spacing:.08em;display:block;}
+.navline{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.navline b{font-size:16px;font-weight:900;}
+.heat{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,1fr);gap:3px;overflow-x:auto;padding-bottom:6px;}
+.heat i{width:12px;height:12px;border-radius:3px;background:var(--gray);display:block;}
+.legend{display:flex;gap:6px;align-items:center;font-size:10px;color:var(--mute);margin-top:8px;}
+.legend i{width:12px;height:12px;border-radius:3px;display:inline-block;}
+
+/* modal */
+.modal{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.55);display:none;align-items:flex-end;justify-content:center;}
+.modal.on{display:flex;}
+.sheet{
+  background:var(--paper);width:100%;max-width:720px;max-height:92svh;overflow:auto;
+  border-radius:22px 22px 0 0;padding:20px 18px calc(24px + env(safe-area-inset-bottom));
+}
+.sheet .bar{width:44px;height:5px;border-radius:9px;background:var(--line);margin:0 auto 14px;}
+.toast{
+  position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);
+  background:var(--ink);color:var(--paper);padding:12px 20px;border-radius:999px;font-size:13px;
+  opacity:0;pointer-events:none;transition:all .25s ease;z-index:200;max-width:90vw;text-align:center;
+}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0);}
+table.terms{width:100%;border-collapse:collapse;font-size:13px;font-weight:500;}
+table.terms td{padding:6px 4px;}
+table.terms input{padding:8px 10px;font-size:13px;border-radius:10px;}
+@media (max-width:520px){
+  .stats{grid-template-columns:1fr 1fr;}
+  .stats .stat:last-child{grid-column:span 2;}
+  .mode-grid{grid-template-columns:1fr;}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="logo">NIKKI<small>DIARY</small></div>
+    <div class="today-label" id="todayLabel"></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- ===== WRITE ===== -->
+  <section class="view on" id="v-write"></section>
+  <!-- ===== RECORDS ===== -->
+  <section class="view" id="v-records"></section>
+  <!-- ===== REVIEW ===== -->
+  <section class="view" id="v-review"></section>
+  <!-- ===== SETTINGS ===== -->
+  <section class="view" id="v-settings"></section>
+</main>
+
+<nav class="tabs">
+  <button data-tab="write" class="on">書く</button>
+  <button data-tab="records">記録</button>
+  <button data-tab="review">振り返り</button>
+  <button data-tab="settings">設定</button>
+</nav>
+
+<div class="modal" id="modal"><div class="sheet" id="sheet"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* =========================================================
+   NIKKI — 質問に答えるだけの日記
+   データはすべて localStorage に保存（サーバー送信なし）
+   ========================================================= */
+
+const STORE_KEY = "nikki.v1";
+const WD = ["日","月","火","水","木","金","土"];
+
+/* ---------- date helpers (local time) ---------- */
+const pad = n => String(n).padStart(2,"0");
+const ymd = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parse = s => { const [y,m,d] = s.split("-").map(Number); return new Date(y,m-1,d); };
+const addDays = (s,n) => { const d = parse(s); d.setDate(d.getDate()+n); return ymd(d); };
+const todayStr = () => ymd(new Date());
+const mondayOf = s => { const d = parse(s); const off = (d.getDay()+6)%7; d.setDate(d.getDate()-off); return ymd(d); };
+const jpDate = s => { const d = parse(s); return `${d.getFullYear()}年${pad(d.getMonth()+1)}月${pad(d.getDate())}日（${WD[d.getDay()]}）`; };
+const shortDate = s => { const d = parse(s); return `${d.getMonth()+1}/${d.getDate()}（${WD[d.getDay()]}）`; };
+const nowHM = () => { const d = new Date(); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+
+/* ---------- storage ---------- */
+function defaultState(){
+  return {
+    version:1,
+    entries:{},     // "YYYY-MM-DD": entry
+    reviews:{},     // "YYYY-MM-DD"(monday): { memo, feedback }
+    settings:{
+      reminder:"21:00",
+      terms:[["瀬戸内会議","瀬戸内ミライ会議"]],
+    },
+    draft:null,     // 書きかけの対話（リロード対策）
+  };
+}
+function load(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(!raw) return defaultState();
+    const s = JSON.parse(raw);
+    const base = defaultState();
+    return {...base, ...s, settings:{...base.settings, ...(s.settings||{})}};
+  }catch(e){ console.error(e); return defaultState(); }
+}
+let S = load();
+function save(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(S)); }
+  catch(e){ toast("保存に失敗しました。ブラウザの容量を確認してください。"); }
+}
+
+/* ---------- utils ---------- */
+const $ = (sel,root=document) => root.querySelector(sel);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function toast(msg){
+  const t = $("#toast"); t.textContent = msg; t.classList.add("on");
+  clearTimeout(toast._t); toast._t = setTimeout(()=>t.classList.remove("on"), 2400);
+}
+function download(name, content, type="text/markdown;charset=utf-8"){
+  const blob = content instanceof Blob ? content : new Blob([content], {type});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 2000);
+}
+async function copyText(text, okMsg){
+  try{ await navigator.clipboard.writeText(text); toast(okMsg || "コピーしました"); }
+  catch(e){
+    const ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta);
+    ta.select(); document.execCommand("copy"); ta.remove(); toast(okMsg || "コピーしました");
+  }
+}
+function applyTerms(text){
+  let out = text || "";
+  for(const [from,to] of S.settings.terms){
+    if(from && to && from !== to) out = out.split(from).join(to);
+  }
+  return out;
+}
+
+/* =========================================================
+   QUESTIONS
+   ========================================================= */
+const Q = {
+  events:      {type:"text", step:"出来事", text:"今日あったことを教えてください。", hint:"事実ベースで構いません。箇条書きのように改行で区切ると、そのまま項目になります。"},
+  mood:        {type:"mood", step:"調子", text:"今日の調子を1〜5で教えてください。あわせて、その数値にした理由を一言お願いします。", hint:"数値だけだと後で読み返したときに理由が分からないため、一言を添えてください。"},
+  learn:       {type:"text", step:"学び", text:"今日新しく知ったこと、考えが変わったことはありますか。", hint:"小さなことで構いません。無ければ「なし」で進めます。"},
+  ent_people:  {type:"text", step:"起業ログ 1/3", text:"今日出会った人、話した相手はいましたか。", hint:"人数だけでなく、誰と何を話したかを書くと後で活きます。"},
+  ent_action:  {type:"text", step:"起業ログ 2/3", text:"今日の起業に向けた挑戦・行動は何でしたか。"},
+  ent_insight: {type:"text", step:"起業ログ 3/3", text:"そこからの気づきと、次の一歩を教えてください。"},
+  ent_follow:  {type:"text", step:"起業ログ 追い質問", text:"その行動と気づきはどうつながっていますか。次の一歩を、明日すぐ動ける単位まで具体的にすると何になりますか。", hint:"思いつかなければ「スキップ」を押してください。", optional:true},
+  todos:       {type:"todos", step:"明日のToDo", text:"明日やることを3つまで教えてください。", hint:"多すぎると実行率が下がるため、3つまでにしています。"},
+};
+const FLOW = {
+  full:  ["events","mood","learn","ent_people","ent_action","ent_insight","ent_follow","todos"],
+  short: ["events","mood","todos"],
+};
+
+/* =========================================================
+   MARKDOWN GENERATION（nikki-diary の様式に準拠）
+   ========================================================= */
+function bullets(text){
+  const lines = applyTerms(text).split(/\n+/).map(l=>l.replace(/^\s*[-・*]\s*/,"").trim()).filter(Boolean);
+  if(!lines.length) return "- （記入なし）";
+  return lines.map(l=>`- ${l}`).join("\n");
+}
+function inline(text){
+  const t = applyTerms(text).split(/\n+/).map(l=>l.trim()).filter(Boolean).join(" / ");
+  return t || "（記入なし）";
+}
+function buildMarkdown(date, mode, A, keptKeys){
+  const created = `${date} ${nowHM()}`;
+  const monday = mondayOf(date);
+  const L = [];
+  L.push("---", `created: ${created}`, "tags:", "  - daily", "---");
+  L.push(`# ${jpDate(date)}`, "");
+  L.push("## 出来事", bullets(A.events), "");
+  L.push("## 調子（1〜5）", `- 数値：${A.moodScore ?? "?"}／5 → ${inline(A.moodReason)}`, "");
+  if(mode === "full"){
+    L.push("## 学び・今日知ったこと", bullets(A.learn), "");
+    const insight = [A.ent_insight, A.ent_follow].filter(Boolean).map(inline).join(" → ");
+    L.push("## 起業ログ",
+      `- 出会った人・話した相手：${inline(A.ent_people)}`,
+      `- 今日の起業的な挑戦・行動：${inline(A.ent_action)}`,
+      `- そこからの気づき・次の一歩：→ ${insight || "（記入なし）"}`, "");
+  }
+  const todos = (A.todos||[]).filter(t=>t.text.trim());
+  L.push(mode === "full" ? "## 明日のToDo" : "## 明日やること");
+  L.push(todos.length ? todos.map(t=>`- [ ] ${applyTerms(t.text.trim())}`).join("\n") : "- （記入なし）", "");
+  const kept = (keptKeys||[]).map(k => k === "mood" ? A.moodReason : A[k]).filter(v => v && v.trim());
+  if(kept.length){
+    L.push("## そのままの言葉（対話より）");
+    kept.forEach(v => L.push(v.trim().split("\n").map(x=>`> ${x}`).join("\n"), ""));
+  }
+  L.push("---", `今週の振り返り： [[${monday}_週次レビュー]]`);
+  return L.join("\n");
+}
+function insertFeedback(md, fb){
+  fb = (fb||"").trim();
+  if(!fb) return md;
+  if(/\n## フィードバック\n/.test(md)) return md; // 既にあればスキップ（スキル仕様と同じ）
+  const body = fb.startsWith("## フィードバック") ? fb : `## フィードバック\n${fb}`;
+  const idx = md.lastIndexOf("\n---\n今週の振り返り");
+  if(idx === -1) return md + "\n\n" + body + "\n";
+  return md.slice(0, idx) + "\n" + body + "\n" + md.slice(idx);
+}
+
+/* ---------- tiny markdown renderer（プレビュー用） ---------- */
+function renderMd(md){
+  let src = md.replace(/^---\n[\s\S]*?\n---\n/, ""); // frontmatter
+  const out = []; let inList = false;
+  const fmt = s => esc(s)
+    .replace(/==(.+?)==/g,"<mark>$1</mark>")
+    .replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>")
+    .replace(/\[\[(.+?)\]\]/g,'<span class="wl">$1</span>');
+  const closeList = () => { if(inList){ out.push("</ul>"); inList = false; } };
+  for(const raw of src.split("\n")){
+    const line = raw.replace(/\s+$/,"");
+    let m;
+    if(/^#\s/.test(line)){ closeList(); out.push(`<h1>${fmt(line.slice(2))}</h1>`); }
+    else if(/^##\s/.test(line)){ closeList(); out.push(`<h2>${fmt(line.slice(3))}</h2>`); }
+    else if(/^###\s/.test(line)){ closeList(); out.push(`<h2>${fmt(line.slice(4))}</h2>`); }
+    else if((m = line.match(/^\s*-\s\[( |x)\]\s?(.*)$/))){
+      if(!inList){ out.push("<ul>"); inList = true; }
+      out.push(`<li class="task ${m[1]==="x"?"done":""}"><i></i>${fmt(m[2])}</li>`);
+    }
+    else if((m = line.match(/^\s*[-*]\s(.*)$/))){
+      if(!inList){ out.push("<ul>"); inList = true; }
+      out.push(`<li>${fmt(m[1])}</li>`);
+    }
+    else if(/^>\s?/.test(line)){ closeList(); out.push(`<blockquote>${fmt(line.replace(/^>\s?/,""))}</blockquote>`); }
+    else if(/^---$/.test(line)){ closeList(); out.push("<hr>"); }
+    else if(line.trim() === ""){ closeList(); }
+    else if(/^\|/.test(line)){ closeList(); out.push(`<p style="font-family:monospace;font-size:12px">${fmt(line)}</p>`); }
+    else { closeList(); out.push(`<p>${fmt(line)}</p>`); }
+  }
+  closeList();
+  return `<div class="md">${out.join("")}</div>`;
+}
+
+/* =========================================================
+   WRITE VIEW
+   ========================================================= */
+let W = null; // 書きかけの対話状態
+
+function newSession(date, mode){
+  const prev = addDays(date, -1);
+  const prevEntry = S.entries[prev];
+  const needCheck = !!(prevEntry && (prevEntry.answers.todos||[]).some(t=>t.text.trim()) && !prevEntry.todoChecked);
+  return {date, mode, i:0, answers:{todos:[{text:"",done:null},{text:"",done:null},{text:"",done:null}]}, kept:[], checking:needCheck, stage:"chat", markdown:"", feedback:""};
+}
+function persistDraft(){ S.draft = W; save(); }
+
+function renderWrite(){
+  const el = $("#v-write");
+  if(W && W.stage === "chat") return renderChat(el);
+  if(W && W.stage === "draft") return renderDraft(el);
+  if(W && W.stage === "done") return renderDone(el);
+  renderStart(el);
+}
+
+function renderStart(el){
+  const today = todayStr();
+  const yest = addDays(today,-1);
+  const hasToday = !!S.entries[today];
+  const hasYest = !!S.entries[yest];
+  const anyEntry = Object.keys(S.entries).length > 0;
+  const resume = S.draft && S.draft.stage !== "done";
+  const streak = calcStreak();
+  el.innerHTML = `
+    <h2 class="sec">TONIGHT</h2>
+    ${resume ? `
+      <div class="card gray">
+        <h3>書きかけの日記があります</h3>
+        <p class="note">${esc(jpDate(S.draft.date))}・${S.draft.mode==="full"?"フル版":"短め"}。途中から再開できます。</p>
+        <div class="row" style="margin-top:12px">
+          <button class="btn" id="resume">続きから書く</button>
+          <button class="btn ghost" id="discard">破棄する</button>
+        </div>
+      </div>` : ""}
+    ${hasToday ? `
+      <div class="card">
+        <h3>今日の日記は保存済みです</h3>
+        <p class="note">${esc(jpDate(today))}。内容の確認・編集は「記録」タブから行えます。</p>
+        <div class="row" style="margin-top:12px"><button class="btn ghost" id="openToday">今日の日記を開く</button></div>
+      </div>` : `
+      <div class="card">
+        <h3>${esc(jpDate(today))}</h3>
+        <p class="note">質問に1問ずつ答えるだけで日記が組み上がります。保存する前に必ず下書きを確認できます。</p>
+        <div class="mode-grid">
+          <button class="mode" data-mode="full"><b>フル版</b><span>出来事・調子・学び・起業ログ・明日のToDo。10分ほど。</span></button>
+          <button class="mode" data-mode="short"><b>短め</b><span>出来事・調子・明日やること。3分ほど。</span></button>
+        </div>
+      </div>`}
+    ${anyEntry && !hasYest ? `
+      <div class="card gray">
+        <h3>昨日（${esc(shortDate(yest))}）の日記がありません</h3>
+        <p class="note">昨日の分も書きますか。書く場合は短め版で作成します。</p>
+        <div class="row" style="margin-top:12px"><button class="btn ghost" id="writeYest">昨日の分を短めに書く</button></div>
+      </div>` : ""}
+    <div class="row between" style="margin-top:22px">
+      <p class="note">連続記録：<b style="color:#000">${streak}日</b>　／　総記録：<b style="color:#000">${Object.keys(S.entries).length}日</b></p>
+      <button class="btn ghost small" id="otherDate">日付を指定して書く</button>
+    </div>
+  `;
+  el.querySelectorAll(".mode").forEach(b => b.onclick = () => { W = newSession(today, b.dataset.mode); persistDraft(); renderWrite(); });
+  $("#resume", el) && ($("#resume", el).onclick = () => { W = S.draft; renderWrite(); });
+  $("#discard", el) && ($("#discard", el).onclick = () => { if(confirm("書きかけの内容を破棄しますか。")){ S.draft = null; save(); renderWrite(); } });
+  $("#openToday", el) && ($("#openToday", el).onclick = () => openEntry(today));
+  $("#writeYest", el) && ($("#writeYest", el).onclick = () => { W = newSession(yest, "short"); persistDraft(); renderWrite(); });
+  $("#otherDate", el).onclick = pickDateModal;
+}
+
+function pickDateModal(){
+  openModal(`
+    <h3>日付を指定して書く</h3>
+    <label class="f">日付</label><input type="date" id="pd" value="${todayStr()}" max="${todayStr()}">
+    <label class="f">形式</label>
+    <div class="seg" id="pm"><button data-m="full" class="on">フル版</button><button data-m="short">短め</button></div>
+    <div class="row end"><button class="btn ghost" data-close>やめる</button><button class="btn" id="pdGo">書き始める</button></div>
+  `);
+  let mode = "full";
+  document.querySelectorAll("#pm button").forEach(b => b.onclick = () => {
+    mode = b.dataset.m; document.querySelectorAll("#pm button").forEach(x=>x.classList.toggle("on", x===b));
+  });
+  $("#pdGo").onclick = () => {
+    const d = $("#pd").value; if(!d) return;
+    if(S.entries[d] && !confirm(`${jpDate(d)}の日記は既にあります。書き直しますか（保存時に上書きされます）。`)) return;
+    closeModal(); W = newSession(d, mode); persistDraft(); switchTab("write");
+  };
+}
+
+function calcStreak(){
+  let d = todayStr(); if(!S.entries[d]) d = addDays(d,-1);
+  let n = 0; while(S.entries[d]){ n++; d = addDays(d,-1); }
+  return n;
+}
+
+function answerText(key){
+  const A = W.answers;
+  if(key === "mood") return `${A.moodScore}／5\n${A.moodReason||""}`.trim();
+  if(key === "todos") return (A.todos||[]).filter(t=>t.text.trim()).map((t,i)=>`${i+1}. ${t.text.trim()}`).join("\n") || "（なし）";
+  return A[key] || (Q[key].optional ? "（スキップ）" : "");
+}
+
+function renderChat(el){
+  const flow = FLOW[W.mode];
+  const parts = [];
+  parts.push(`<div class="row between" style="margin-bottom:14px">
+    <h2 class="sec" style="margin:0">${esc(shortDate(W.date))}・${W.mode==="full"?"フル版":"短め"}</h2>
+    <button class="btn ghost small" id="quit">中断</button></div>`);
+  parts.push(`<div class="chat" id="chat">`);
+
+  // 昨日のToDo確認（コミットメント検証）
+  const prev = addDays(W.date,-1);
+  if(W.checking){
+    const todos = S.entries[prev].answers.todos.map((t,i)=>({...t,i})).filter(t=>t.text.trim());
+    parts.push(`<div class="bubble q"><span class="step">はじめに</span>昨日（${esc(shortDate(prev))}）に決めたToDoの結果を教えてください。できたものにチェックを入れてください。<span class="hint">週次の振り返りで、ToDoの達成率として集計します。</span></div>`);
+    parts.push(`</div><div class="composer"><div class="check-list">
+      ${todos.map(t=>`<label><input type="checkbox" data-ti="${t.i}" ${t.done?"checked":""}>${esc(t.text)}</label>`).join("")}
+      </div><div class="row end" style="margin-top:10px"><button class="btn" id="checkDone">記録して次へ</button></div></div>`);
+    el.innerHTML = parts.join("");
+    $("#quit").onclick = quitChat;
+    $("#checkDone").onclick = () => {
+      const e = S.entries[prev];
+      el.querySelectorAll("[data-ti]").forEach(cb => { e.answers.todos[+cb.dataset.ti].done = cb.checked; });
+      e.todoChecked = true;
+      e.markdown = syncTodoMarks(e.markdown, e.answers.todos);
+      W.checking = false; persistDraft(); renderWrite();
+    };
+    return;
+  }
+
+  // これまでの問答
+  for(let k = 0; k < W.i; k++){
+    const key = flow[k], q = Q[key];
+    parts.push(`<div class="bubble q"><span class="step">${esc(q.step)}</span>${esc(q.text)}</div>`);
+    const keepable = (key !== "todos");
+    const kept = W.kept.includes(key);
+    parts.push(`<div class="a-wrap"><div class="bubble a">${esc(answerText(key))}</div>
+      ${keepable ? `<button class="keep ${kept?"on":""}" data-keep="${key}" title="うまく言葉にできた回答を「そのままの言葉」欄に残します">${kept?"言葉を残す：オン":"この言葉を残す"}</button>` : ""}</div>`);
+  }
+  // 現在の質問
+  const key = flow[W.i], q = Q[key];
+  parts.push(`<div class="bubble q"><span class="step">${esc(q.step)}　${W.i+1}/${flow.length}</span>${esc(q.text)}${q.hint?`<span class="hint">${esc(q.hint)}</span>`:""}</div>`);
+  parts.push(`</div>`);
+
+  // 入力欄
+  const A = W.answers;
+  let input = "";
+  if(q.type === "text"){
+    input = `<textarea id="ans" placeholder="ここに入力">${esc(A[key]||"")}</textarea>`;
+  }else if(q.type === "mood"){
+    input = `<div class="scale-cap"><span>1 よくない</span><span>5 とてもよい</span></div>
+      <div class="scale">${[1,2,3,4,5].map(n=>`<button data-score="${n}" class="${A.moodScore===n?"on":""}">${n}</button>`).join("")}</div>
+      <input type="text" id="ans" placeholder="その数値にした理由を一言" value="${esc(A.moodReason||"")}">`;
+  }else if(q.type === "todos"){
+    input = A.todos.map((t,i)=>`<div class="todo-in"><span>${i+1}</span><input type="text" data-todo="${i}" placeholder="例：〇〇さんに企画書を送る" value="${esc(t.text)}"></div>`).join("");
+  }
+  parts.push(`<div class="composer">${input}
+    <div class="row between" style="margin-top:10px">
+      <button class="btn ghost small" id="back" ${W.i===0?"disabled":""}>ひとつ戻る</button>
+      <div class="row">
+        ${q.optional ? `<button class="btn ghost" id="skip">スキップ</button>` : ""}
+        <button class="btn" id="next">${W.i === flow.length-1 ? "下書きをつくる" : "次へ"}</button>
+      </div>
+    </div>
+    <p class="note" style="margin-top:8px">Ctrl / Cmd + Enter でも次へ進めます。入力内容は自動で一時保存されます。</p>
+  </div>`);
+  el.innerHTML = parts.join("");
+
+  // events
+  $("#quit").onclick = quitChat;
+  el.querySelectorAll("[data-keep]").forEach(b => b.onclick = () => {
+    const k = b.dataset.keep;
+    W.kept = W.kept.includes(k) ? W.kept.filter(x=>x!==k) : [...W.kept, k];
+    persistDraft(); renderWrite();
+  });
+  el.querySelectorAll("[data-score]").forEach(b => b.onclick = () => {
+    A.moodScore = +b.dataset.score; collect(); persistDraft(); renderWrite(); $("#ans") && $("#ans").focus();
+  });
+  const ans = $("#ans");
+  if(ans){ ans.oninput = () => { collect(); persistDraft(); }; }
+  el.querySelectorAll("[data-todo]").forEach(inp => inp.oninput = () => { collect(); persistDraft(); });
+  $("#back").onclick = () => { collect(); W.i = Math.max(0, W.i-1); persistDraft(); renderWrite(); };
+  $("#skip") && ($("#skip").onclick = () => { A[key] = ""; advance(); });
+  $("#next").onclick = () => {
+    collect();
+    if(q.type === "text" && !q.optional && !(A[key]||"").trim()){ toast("一言でも入力してください。無ければ「なし」と入力してください。"); return; }
+    if(q.type === "mood" && !A.moodScore){ toast("1〜5の数値を選んでください。"); return; }
+    if(q.type === "mood" && !(A.moodReason||"").trim()){ toast("理由を一言だけ添えてください。"); return; }
+    advance();
+  };
+  el.onkeydown = ev => { if(ev.key === "Enter" && (ev.metaKey || ev.ctrlKey) && $("#next")){ ev.preventDefault(); $("#next").click(); } };
+  // focus & scroll
+  const focusEl = ans || el.querySelector("[data-todo]");
+  if(focusEl && q.type !== "mood") focusEl.focus({preventScroll:true});
+  el.querySelector(".composer").scrollIntoView({block:"end", behavior:"smooth"});
+
+  function collect(){
+    if(q.type === "text" && ans) A[key] = ans.value;
+    if(q.type === "mood" && ans) A.moodReason = ans.value;
+    if(q.type === "todos") el.querySelectorAll("[data-todo]").forEach(inp => { A.todos[+inp.dataset.todo].text = inp.value; });
+  }
+  function advance(){
+    if(W.i < flow.length-1){ W.i++; persistDraft(); renderWrite(); }
+    else{
+      W.markdown = buildMarkdown(W.date, W.mode, W.answers, W.kept);
+      W.stage = "draft"; persistDraft(); renderWrite(); window.scrollTo({top:0});
+    }
+  }
+}
+
+function quitChat(){
+  W = null; renderWrite(); toast("書きかけの内容は一時保存しました。");
+}
+
+function renderDraft(el){
+  el.innerHTML = `
+    <h2 class="sec">DRAFT — 保存前の確認</h2>
+    <p class="note" style="margin-bottom:14px">内容が実際と違う箇所、書いていないことが混ざっている箇所がないか確認してください。承認するまでは保存されません。</p>
+    <div class="seg" id="dSeg"><button data-v="preview" class="on">プレビュー</button><button data-v="edit">直接編集</button></div>
+    <div class="card" id="dBody"></div>
+    <div class="card gray">
+      <h3>フィードバック（任意）</h3>
+      <p class="note">このアプリはAIを内蔵していません。下のボタンで、日記本文とフィードバックの条件をまとめた依頼文をコピーできます。Claude に貼り付け、返ってきた文章を下の欄に貼ると、日記の末尾に「フィードバック」として追記されます。</p>
+      <div class="row" style="margin:12px 0"><button class="btn ghost small" id="copyPrompt">Claude への依頼文をコピー</button></div>
+      <textarea id="fb" placeholder="返ってきたフィードバックをここに貼り付け（空欄なら追記しません）">${esc(W.feedback||"")}</textarea>
+    </div>
+    <div class="row between">
+      <button class="btn ghost" id="backQ">質問に戻る</button>
+      <button class="btn" id="approve">承認して保存</button>
+    </div>
+  `;
+  let view = "preview";
+  const body = $("#dBody");
+  const draw = () => {
+    if(view === "preview") body.innerHTML = renderMd(W.markdown);
+    else{
+      body.innerHTML = `<textarea id="mdEdit" style="min-height:420px;font-family:ui-monospace,Menlo,monospace;font-size:13px">${esc(W.markdown)}</textarea>`;
+      $("#mdEdit").oninput = e => { W.markdown = e.target.value; persistDraft(); };
+    }
+  };
+  draw();
+  el.querySelectorAll("#dSeg button").forEach(b => b.onclick = () => {
+    view = b.dataset.v; el.querySelectorAll("#dSeg button").forEach(x=>x.classList.toggle("on", x===b)); draw();
+  });
+  $("#fb").oninput = e => { W.feedback = e.target.value; persistDraft(); };
+  $("#copyPrompt").onclick = () => copyText(dailyPrompt(W.markdown), "依頼文をコピーしました。Claude に貼り付けてください。");
+  $("#backQ").onclick = () => {
+    if(!confirm("質問に戻ると、直接編集した内容は回答から作り直されます。戻りますか。")) return;
+    W.stage = "chat"; W.i = FLOW[W.mode].length-1; persistDraft(); renderWrite();
+  };
+  $("#approve").onclick = () => {
+    const md = insertFeedback(W.markdown, W.feedback);
+    S.entries[W.date] = {
+      date:W.date, mode:W.mode, savedAt:new Date().toISOString(),
+      answers:JSON.parse(JSON.stringify(W.answers)), kept:[...W.kept],
+      markdown:md, todoChecked:false,
+    };
+    W.stage = "done"; S.draft = null; save(); renderWrite(); window.scrollTo({top:0});
+  };
+}
+
+function renderDone(el){
+  const e = S.entries[W.date];
+  const todos = (e.answers.todos||[]).filter(t=>t.text.trim());
+  el.innerHTML = `
+    <h2 class="sec">SAVED</h2>
+    <div class="card">
+      <h3>${esc(jpDate(W.date))}の日記を保存しました</h3>
+      <p class="note">保存先はこの端末のブラウザ内です。Obsidian に入れる場合は、下のボタンで .md ファイルを書き出すか、「設定」からまとめて書き出してください。</p>
+      <p class="note" style="margin-top:6px">ファイル名：日記/${mondayOf(W.date)}週/${W.date}.md</p>
+      <div class="row" style="margin-top:12px">
+        <button class="btn" id="dl">.md を書き出す</button>
+        <button class="btn ghost" id="cp">本文をコピー</button>
+      </div>
+    </div>
+    ${todos.length ? `<div class="card gray"><h3>明日のToDo</h3><ul class="list-plain">${todos.map(t=>`<li>${esc(t.text)}</li>`).join("")}</ul>
+      <p class="note">次に日記を書くとき、最初にこの結果を確認します。</p></div>` : ""}
+    <div class="row end"><button class="btn ghost" id="home">トップに戻る</button></div>
+  `;
+  $("#dl").onclick = () => download(`${W.date}.md`, e.markdown);
+  $("#cp").onclick = () => copyText(e.markdown);
+  $("#home").onclick = () => { W = null; renderWrite(); };
+}
+
+function syncTodoMarks(md, todos){
+  let out = md || "";
+  for(const t of todos||[]){
+    const text = applyTerms((t.text||"").trim()); if(!text) continue;
+    const un = `- [ ] ${text}`, dn = `- [x] ${text}`;
+    out = t.done ? out.replace(un, dn) : out.replace(dn, un);
+  }
+  return out;
+}
+
+/* ---------- Claude 依頼文 ---------- */
+function dailyPrompt(md){
+  return `以下は私（年内起業を目指す高校生）の今日の日記です。この日記の末尾に追記する「フィードバック」を作成してください。
+
+条件
+- 敬語で書く。感嘆符（！）と絵文字は使わない。落ち着いた論理的な文章にする。
+- 日記に書かれていない出来事・人物・感情を推測で補わない。根拠がないものは「不明」とする。
+- 空虚な称賛はしない。日記の記述に紐づく具体的な事実に基づいて評価し、批判的な視点も示す。
+- 人数などの虚栄指標だけを成果として扱わない。
+- 次の形式の Markdown だけを出力する（前置きや締めの文は不要）。
+
+## フィードバック
+- ==前進した点==：（日記の記述を根拠に）
+- ==停滞した点==：（批判的視点で）
+- 次の一歩：→（明日実行できる具体的な行動）
+
+日記本文
+----
+${md}
+----`;
+}
+
+/* =========================================================
+   RECORDS VIEW
+   ========================================================= */
+let recQuery = "";
+function renderRecords(){
+  const el = $("#v-records");
+  const dates = Object.keys(S.entries).sort().reverse();
+  const q = recQuery.trim();
+  const hit = q ? dates.filter(d => S.entries[d].markdown.includes(q)) : dates;
+  const groups = {};
+  hit.forEach(d => { const w = mondayOf(d); (groups[w] ||= []).push(d); });
+  el.innerHTML = `
+    <h2 class="sec">RECORDS</h2>
+    <input type="text" id="recQ" placeholder="キーワードで検索" value="${esc(recQuery)}" style="margin-bottom:6px">
+    ${!dates.length ? `<div class="empty" style="margin-top:14px">まだ日記がありません。<br>「書く」タブから最初の日記をつくってください。</div>` :
+      !hit.length ? `<div class="empty" style="margin-top:14px">「${esc(q)}」を含む日記は見つかりませんでした。</div>` :
+      Object.keys(groups).sort().reverse().map(w => `
+        <div class="week-h">${w}週（${shortDate(w)} 〜 ${shortDate(addDays(w,6))}）</div>
+        ${groups[w].map(d => { const e = S.entries[d]; return `
+          <button class="entry-row" data-open="${d}">
+            <span class="d">${shortDate(d)}</span>
+            <span class="t">${esc(firstLine(e.answers.events))}</span>
+            <span class="mood-pill" style="${moodStyle(e.answers.moodScore)}">${e.answers.moodScore ?? "-"}</span>
+          </button>`; }).join("")}
+      `).join("")}
+  `;
+  const qi = $("#recQ");
+  qi.oninput = () => { recQuery = qi.value; const pos = qi.selectionStart; renderRecords(); const n = $("#recQ"); n.focus(); n.setSelectionRange(pos,pos); };
+  el.querySelectorAll("[data-open]").forEach(b => b.onclick = () => openEntry(b.dataset.open));
+}
+const firstLine = t => (t||"").split("\n").map(s=>s.replace(/^\s*[-・*]\s*/,"").trim()).filter(Boolean)[0] || "（出来事の記入なし）";
+function moodStyle(n){
+  // 単色の濃淡で表現（1=白 〜 5=黒）
+  if(!n) return "";
+  const shades = {1:["#fff","#000"],2:["#d6d6d6","#000"],3:["#9e9e9e","#000"],4:["#4a4a4a","#fff"],5:["#000","#fff"]};
+  const [bg,fg] = shades[n]; return `background:${bg};color:${fg};`;
+}
+
+function openEntry(date){
+  const e = S.entries[date]; if(!e) return;
+  openModal(`
+    <div class="row between" style="margin-bottom:10px">
+      <span class="note">日記/${mondayOf(date)}週/${date}.md</span>
+      <button class="btn ghost small" data-close>閉じる</button>
+    </div>
+    <div id="eBody">${renderMd(e.markdown)}</div>
+    <div class="row" style="margin-top:18px">
+      <button class="btn small" id="eDl">.md を書き出す</button>
+      <button class="btn ghost small" id="eCp">コピー</button>
+      <button class="btn ghost small" id="eEdit">編集</button>
+      <button class="btn ghost small" id="eFb">フィードバック依頼文</button>
+      <button class="btn danger small" id="eDel">削除</button>
+    </div>
+  `);
+  $("#eDl").onclick = () => download(`${date}.md`, e.markdown);
+  $("#eCp").onclick = () => copyText(e.markdown);
+  $("#eFb").onclick = () => copyText(dailyPrompt(e.markdown), "依頼文をコピーしました。返答は「編集」から末尾に追記できます。");
+  $("#eDel").onclick = () => {
+    if(!confirm(`${jpDate(date)}の日記を削除します。元に戻せません。よろしいですか。`)) return;
+    delete S.entries[date]; save(); closeModal(); refreshAll(); toast("削除しました");
+  };
+  $("#eEdit").onclick = () => {
+    $("#eBody").innerHTML = `<textarea id="eTa" style="min-height:420px;font-family:ui-monospace,Menlo,monospace;font-size:13px">${esc(e.markdown)}</textarea>
+      <div class="row end" style="margin-top:10px"><button class="btn" id="eSave">保存</button></div>`;
+    $("#eSave").onclick = () => { e.markdown = $("#eTa").value; save(); closeModal(); openEntry(date); refreshAll(); toast("保存しました"); };
+  };
+}
+
+/* =========================================================
+   REVIEW VIEW
+   ========================================================= */
+let RV = { mode:"week", week: mondayOf(todayStr()), month: todayStr().slice(0,7), year: new Date().getFullYear() };
+
+function renderReview(){
+  const el = $("#v-review");
+  el.innerHTML = `
+    <h2 class="sec">REVIEW</h2>
+    <div class="seg" id="rSeg">
+      <button data-m="week" class="${RV.mode==="week"?"on":""}">週次</button>
+      <button data-m="month" class="${RV.mode==="month"?"on":""}">月次</button>
+      <button data-m="year" class="${RV.mode==="year"?"on":""}">年間</button>
+    </div>
+    <div id="rBody"></div>`;
+  el.querySelectorAll("#rSeg button").forEach(b => b.onclick = () => { RV.mode = b.dataset.m; renderReview(); });
+  const body = $("#rBody");
+  if(RV.mode === "week") renderWeek(body);
+  if(RV.mode === "month") renderMonth(body);
+  if(RV.mode === "year") renderYear(body);
+}
+
+function rangeDates(start, n){ return Array.from({length:n}, (_,i)=>addDays(start,i)); }
+
+function todoStats(dates){
+  // 各日の「明日のToDo」が翌日の確認で達成されたか
+  let done = 0, total = 0, pending = 0;
+  for(const d of dates){
+    const e = S.entries[d]; if(!e) continue;
+    for(const t of (e.answers.todos||[])){
+      if(!t.text.trim()) continue;
+      if(e.todoChecked){ total++; if(t.done) done++; } else pending++;
+    }
+  }
+  return {done,total,pending,rate: total ? Math.round(done/total*100) : null};
+}
+function avgMood(dates){
+  const v = dates.map(d=>S.entries[d]?.answers.moodScore).filter(Boolean);
+  return v.length ? (v.reduce((a,b)=>a+b,0)/v.length) : null;
+}
+
+function moodChart(dates, labelFn){
+  const W_ = 640, H = 240, padL = 40, padR = 14, padT = 16, padB = 40;
+  const n = dates.length;
+  const x = i => padL + (n===1 ? (W_-padL-padR)/2 : i*(W_-padL-padR)/(n-1));
+  const y = v => padT + (5-v)*(H-padT-padB)/4;
+  let grid = "";
+  for(let v=1; v<=5; v++) grid += `<line x1="${padL}" x2="${W_-padR}" y1="${y(v)}" y2="${y(v)}" stroke="#e6e6e6" stroke-width="1"/><text x="${padL-14}" y="${y(v)+7}" text-anchor="end">${v}</text>`;
+  // 線は記録のある連続区間ごとに引く（欠損日を線で埋めない）
+  let paths = "", seg = [];
+  const flush = () => { if(seg.length > 1) paths += `<polyline fill="none" stroke="#000" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" points="${seg.join(" ")}"/>`; seg = []; };
+  let dots = "", labels = "";
+  dates.forEach((d,i) => {
+    const v = S.entries[d]?.answers.moodScore;
+    if(v){ seg.push(`${x(i)},${y(v)}`); dots += `<circle cx="${x(i)}" cy="${y(v)}" r="4.5" fill="#000"><title>${shortDate(d)}：${v}／5</title></circle>`; }
+    else flush();
+    const lab = labelFn(d,i);
+    if(lab) labels += `<text x="${x(i)}" y="${H-8}" text-anchor="middle">${lab}</text>`;
+  });
+  flush();
+  return `<div class="chart"><svg viewBox="0 0 ${W_} ${H}" role="img" aria-label="調子の推移">${grid}${paths}${dots}${labels}</svg></div>`;
+}
+
+function renderWeek(body){
+  const w = RV.week, dates = rangeDates(w,7);
+  const recorded = dates.filter(d=>S.entries[d]);
+  const avg = avgMood(dates);
+  const ts = todoStats(dates);
+  const ent = recorded.filter(d=>S.entries[d].mode==="full");
+  const kept = recorded.flatMap(d => (S.entries[d].kept||[]).map(k => ({d, text: k==="mood" ? S.entries[d].answers.moodReason : S.entries[d].answers[k]}))).filter(x=>x.text && x.text.trim());
+  const learns = recorded.filter(d => (S.entries[d].answers.learn||"").trim() && S.entries[d].answers.learn.trim() !== "なし");
+  const rv = S.reviews[w] || {memo:"", feedback:""};
+  body.innerHTML = `
+    <div class="navline">
+      <button class="btn ghost small" id="wPrev">前の週</button>
+      <b>${shortDate(w)} 〜 ${shortDate(addDays(w,6))}</b>
+      <button class="btn ghost small" id="wNext">次の週</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="k">記録日数</div><div class="v">${recorded.length}<small>/7</small></div></div>
+      <div class="stat"><div class="k">平均の調子</div><div class="v">${avg ? avg.toFixed(1) : "-"}<small>/5</small></div></div>
+      <div class="stat"><div class="k">ToDo達成率</div><div class="v">${ts.rate ?? "-"}<small>${ts.rate!=null?"%":""}</small></div><div class="s">${ts.total ? `${ts.done}/${ts.total}件` : "確認済みのToDoなし"}${ts.pending?`・未確認${ts.pending}件`:""}</div></div>
+    </div>
+    <div class="card"><h3>調子の推移</h3>${moodChart(dates, d => WD[parse(d).getDay()])}</div>
+    <div class="card">
+      <h3>起業ログ</h3>
+      ${ent.length ? `<ul class="list-plain">${ent.map(d => { const a = S.entries[d].answers; return `<li><span class="d">${shortDate(d)}</span>
+        行動：${esc(inline(a.ent_action))}<br>気づき：→ ${esc([a.ent_insight,a.ent_follow].filter(Boolean).map(inline).join(" → ") || "（記入なし）")}<br><span style="color:var(--mute)">相手：${esc(inline(a.ent_people))}</span></li>`; }).join("")}</ul>`
+        : `<p class="note">この週はフル版の日記がないため、起業ログはありません。</p>`}
+    </div>
+    ${learns.length ? `<div class="card"><h3>学び</h3><ul class="list-plain">${learns.map(d=>`<li><span class="d">${shortDate(d)}</span>${esc(inline(S.entries[d].answers.learn))}</li>`).join("")}</ul></div>` : ""}
+    ${kept.length ? `<div class="card"><h3>そのままの言葉</h3><ul class="list-plain">${kept.map(k=>`<li><span class="d">${shortDate(k.d)}</span>${esc(k.text)}</li>`).join("")}</ul></div>` : ""}
+    <div class="card gray">
+      <h3>週次レビューをつくる</h3>
+      <p class="note">数値と記録の集計はこのアプリが行います。解釈は自分で書くか、Claude に依頼してください。依頼文には今週の日記がすべて含まれます。</p>
+      <label class="f">自分の振り返りメモ</label>
+      <textarea id="wMemo" placeholder="今週を一言で表すと／来週変えること">${esc(rv.memo)}</textarea>
+      <div class="row" style="margin:12px 0"><button class="btn ghost small" id="wPrompt" ${recorded.length?"":"disabled"}>Claude への依頼文をコピー</button></div>
+      <label class="f">Claude からの分析（貼り付け）</label>
+      <textarea id="wFb" placeholder="返ってきた分析をここに貼り付け">${esc(rv.feedback)}</textarea>
+      <div class="row end" style="margin-top:12px">
+        <button class="btn" id="wDl" ${recorded.length?"":"disabled"}>${w}_週次レビュー.md を書き出す</button>
+      </div>
+    </div>
+  `;
+  $("#wPrev").onclick = () => { RV.week = addDays(w,-7); renderReview(); };
+  $("#wNext").onclick = () => { RV.week = addDays(w,7); renderReview(); };
+  const store = () => { S.reviews[w] = {memo:$("#wMemo").value, feedback:$("#wFb").value}; save(); };
+  $("#wMemo").oninput = store; $("#wFb").oninput = store;
+  $("#wPrompt").onclick = () => copyText(weeklyPrompt(w), "依頼文をコピーしました。Claude に貼り付けてください。");
+  $("#wDl").onclick = () => download(`${w}_週次レビュー.md`, weeklyMarkdown(w));
+}
+
+function weeklyMarkdown(w){
+  const dates = rangeDates(w,7), recorded = dates.filter(d=>S.entries[d]);
+  const avg = avgMood(dates), ts = todoStats(dates), rv = S.reviews[w] || {};
+  const L = ["---", `created: ${todayStr()} ${nowHM()}`, "tags:", "  - weekly", "---",
+    `# ${w}週 週次レビュー（${shortDate(w)}〜${shortDate(addDays(w,6))}）`, "",
+    "## 数値", `- 記録日数：${recorded.length}／7`, `- 平均の調子：${avg ? avg.toFixed(1) : "不明"}／5`,
+    `- ToDo達成率：${ts.rate!=null ? `${ts.rate}%（${ts.done}/${ts.total}件）` : "不明（確認済みのToDoなし）"}${ts.pending?`・未確認${ts.pending}件`:""}`, "",
+    "## 調子の推移", "| 日付 | 調子 | 理由 |", "|---|---|---|",
+    ...dates.map(d => { const a = S.entries[d]?.answers; return `| ${shortDate(d)} | ${a?.moodScore ?? "-"} | ${a ? inline(a.moodReason).replace(/\|/g,"／") : "記録なし"} |`; }), "",
+    "## 起業ログ",
+    ...(recorded.filter(d=>S.entries[d].mode==="full").map(d => { const a = S.entries[d].answers;
+      return `- ${shortDate(d)}：${inline(a.ent_action)} → ${[a.ent_insight,a.ent_follow].filter(Boolean).map(inline).join(" → ") || "（記入なし）"}`; })),
+    "", "## 日記", ...recorded.map(d => `- [[${d}]]`), ""];
+  if((rv.memo||"").trim()) L.push("## 自分の振り返り", rv.memo.trim(), "");
+  if((rv.feedback||"").trim()) L.push(rv.feedback.trim().startsWith("##") ? rv.feedback.trim() : `## 分析\n${rv.feedback.trim()}`, "");
+  return L.join("\n");
+}
+function weeklyPrompt(w){
+  const dates = rangeDates(w,7).filter(d=>S.entries[d]);
+  return `以下は私（年内起業を目指す高校生）の1週間分の日記と、その集計です。週次レビューとしての分析を作成してください。
+
+条件
+- 敬語で書く。感嘆符（！）と絵文字は使わない。
+- 日記に書かれていないことを推測で補わない。根拠がないものは「不明」とする。
+- 空虚な称賛はしない。批判的な視点も含め、日記の記述を根拠に評価する。
+- 次の4見出しの Markdown だけを出力する。
+  ## コミットメント検証（ToDoの実行状況と、実行できなかった理由の仮説）
+  ## 調子の推移（変動と、日記から読み取れる要因）
+  ## 起業ログの質的分析（行動と気づきのつながり、虚栄指標に偏っていないか）
+  ## 来週の一歩（実行可能な行動を3つまで）
+
+集計
+${weeklyMarkdown(w).replace(/^---[\s\S]*?---\n/,"")}
+
+日記本文
+${dates.map(d => `----\n${S.entries[d].markdown}`).join("\n")}
+----`;
+}
+
+function renderMonth(body){
+  const [y,m] = RV.month.split("-").map(Number);
+  const first = `${RV.month}-01`;
+  const days = new Date(y, m, 0).getDate();
+  const dates = rangeDates(first, days);
+  const recorded = dates.filter(d=>S.entries[d]);
+  const avg = avgMood(dates), ts = todoStats(dates);
+  // 月に含まれる週
+  const weeks = [...new Set(dates.map(mondayOf))];
+  body.innerHTML = `
+    <div class="navline">
+      <button class="btn ghost small" id="mPrev">前の月</button>
+      <b>${y}年${m}月</b>
+      <button class="btn ghost small" id="mNext">次の月</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="k">記録日数</div><div class="v">${recorded.length}<small>/${days}</small></div></div>
+      <div class="stat"><div class="k">平均の調子</div><div class="v">${avg ? avg.toFixed(1) : "-"}<small>/5</small></div></div>
+      <div class="stat"><div class="k">ToDo達成率</div><div class="v">${ts.rate ?? "-"}<small>${ts.rate!=null?"%":""}</small></div><div class="s">${ts.total ? `${ts.done}/${ts.total}件` : "確認済みのToDoなし"}</div></div>
+    </div>
+    <div class="card"><h3>調子の推移</h3>${moodChart(dates, (d,i) => (i===0 || (i+1)%5===0) ? String(i+1) : "")}</div>
+    <div class="card"><h3>週ごとの要約</h3>
+      <ul class="list-plain">${weeks.map(w => { const wd = rangeDates(w,7).filter(d=>d.startsWith(RV.month)); const r = wd.filter(d=>S.entries[d]); const a = avgMood(wd);
+        return `<li><span class="d">${shortDate(w)}週</span>記録 ${r.length}日・平均の調子 ${a ? a.toFixed(1) : "-"}
+          <button class="btn ghost small" style="float:right" data-week="${w}">週次を見る</button></li>`; }).join("")}</ul>
+    </div>
+    <div class="row end"><button class="btn" id="mDl" ${recorded.length?"":"disabled"}>${RV.month}_月次レビュー.md を書き出す</button></div>
+  `;
+  $("#mPrev").onclick = () => { const d = new Date(y, m-2, 1); RV.month = `${d.getFullYear()}-${pad(d.getMonth()+1)}`; renderReview(); };
+  $("#mNext").onclick = () => { const d = new Date(y, m, 1); RV.month = `${d.getFullYear()}-${pad(d.getMonth()+1)}`; renderReview(); };
+  body.querySelectorAll("[data-week]").forEach(b => b.onclick = () => { RV.mode = "week"; RV.week = b.dataset.week; renderReview(); });
+  $("#mDl").onclick = () => {
+    const L = ["---", `created: ${todayStr()} ${nowHM()}`, "tags:", "  - monthly", "---", `# ${y}年${m}月 月次レビュー`, "",
+      "## 数値", `- 記録日数：${recorded.length}／${days}`, `- 平均の調子：${avg ? avg.toFixed(1) : "不明"}／5`,
+      `- ToDo達成率：${ts.rate!=null ? `${ts.rate}%（${ts.done}/${ts.total}件）` : "不明"}`, "",
+      "## 週次レビュー", ...weeks.map(w => `- [[${w}_週次レビュー]]`), "",
+      "## 起業ログ（行動）", ...recorded.filter(d=>S.entries[d].mode==="full").map(d => `- ${shortDate(d)}：${inline(S.entries[d].answers.ent_action)}`), ""];
+    download(`${RV.month}_月次レビュー.md`, L.join("\n"));
+  };
+}
+
+function renderYear(body){
+  const y = RV.year;
+  const start = mondayOf(`${y}-01-01`);
+  const end = `${y}-12-31`;
+  const cells = [];
+  for(let d = start; d <= end; d = addDays(d,1)){
+    const inYear = d.startsWith(String(y));
+    const e = S.entries[d];
+    const st = !inYear ? "visibility:hidden" : (e ? moodStyle(e.answers.moodScore) + "border:1px solid #000" : "");
+    cells.push(`<i style="${st}" title="${inYear ? `${shortDate(d)}${e?`：調子${e.answers.moodScore}／5`:"：記録なし"}` : ""}" ${e?`data-open="${d}"`:""}></i>`);
+  }
+  const yd = Object.keys(S.entries).filter(d=>d.startsWith(String(y)));
+  const avg = avgMood(yd);
+  // 月別の記録数
+  const perMonth = Array.from({length:12}, (_,i) => yd.filter(d => d.slice(5,7) === pad(i+1)).length);
+  const maxM = Math.max(1, ...perMonth);
+  body.innerHTML = `
+    <div class="navline">
+      <button class="btn ghost small" id="yPrev">前の年</button>
+      <b>${y}年</b>
+      <button class="btn ghost small" id="yNext">次の年</button>
+    </div>
+    <div class="stats">
+      <div class="stat"><div class="k">記録日数</div><div class="v">${yd.length}<small>日</small></div></div>
+      <div class="stat"><div class="k">平均の調子</div><div class="v">${avg ? avg.toFixed(1) : "-"}<small>/5</small></div></div>
+      <div class="stat"><div class="k">最長連続</div><div class="v">${longestStreak(yd)}<small>日</small></div></div>
+    </div>
+    <div class="card">
+      <h3>1年の調子</h3>
+      <div class="heat">${cells.join("")}</div>
+      <div class="legend">記録なし<i style="background:var(--gray)"></i>　調子 1<i style="${moodStyle(1)}border:1px solid #000"></i><i style="${moodStyle(2)}border:1px solid #000"></i><i style="${moodStyle(3)}border:1px solid #000"></i><i style="${moodStyle(4)}border:1px solid #000"></i><i style="${moodStyle(5)}border:1px solid #000"></i>5</div>
+      <p class="note" style="margin-top:6px">マスを押すと、その日の日記を開きます。</p>
+    </div>
+    <div class="card">
+      <h3>月別の記録日数</h3>
+      <div class="chart"><svg viewBox="0 0 640 190" role="img" aria-label="月別の記録日数">
+        ${perMonth.map((c,i) => { const bw = 36, gap = (640-24-12*bw)/11, x = 12 + i*(bw+gap), h = c/maxM*110;
+          return `<rect x="${x}" y="${130-h}" width="${bw}" height="${h}" rx="4" fill="#000"><title>${i+1}月：${c}日</title></rect>
+            ${c?`<text x="${x+bw/2}" y="${124-h}" text-anchor="middle" style="fill:#000">${c}</text>`:""}
+            <text x="${x+bw/2}" y="162" text-anchor="middle">${i+1}</text>`; }).join("")}
+      </svg></div>
+    </div>
+  `;
+  $("#yPrev").onclick = () => { RV.year--; renderReview(); };
+  $("#yNext").onclick = () => { RV.year++; renderReview(); };
+  body.querySelectorAll("[data-open]").forEach(c => { c.style.cursor = "pointer"; c.onclick = () => openEntry(c.dataset.open); });
+  // 今年なら直近（右端）が見えるようにスクロール
+  if(y === new Date().getFullYear()){ const h = body.querySelector(".heat"); h.scrollLeft = h.scrollWidth; }
+}
+function longestStreak(dates){
+  const set = new Set(dates); let best = 0;
+  for(const d of dates){ if(set.has(addDays(d,-1))) continue; let n = 0, c = d; while(set.has(c)){ n++; c = addDays(c,1); } best = Math.max(best,n); }
+  return best;
+}
+
+/* =========================================================
+   SETTINGS VIEW
+   ========================================================= */
+function renderSettings(){
+  const el = $("#v-settings");
+  el.innerHTML = `
+    <h2 class="sec">SETTINGS</h2>
+
+    <div class="card">
+      <h3>毎晩のリマインダー</h3>
+      <p class="note">このアプリはブラウザだけで動くため、自分から通知を送ることはできません。代わりに、毎日決まった時刻に繰り返す予定（.ics）を書き出せます。Google カレンダーや iPhone のカレンダーに取り込むと、その時刻に通知が届きます。</p>
+      <label class="f">時刻</label>
+      <input type="time" id="rTime" value="${esc(S.settings.reminder)}" style="max-width:180px">
+      <div class="row" style="margin-top:12px"><button class="btn" id="rIcs">リマインダー（.ics）を書き出す</button></div>
+    </div>
+
+    <div class="card">
+      <h3>Obsidian へ書き出す</h3>
+      <p class="note">すべての日記と週次レビューを、vault と同じフォルダ構成（日記/YYYY-MM-DD週/YYYY-MM-DD.md）の ZIP にまとめます。展開して vault に上書きコピーしてください。同名のファイルは置き換わるため、Obsidian 側で直接編集した日記がある場合は先にバックアップを取ってください。</p>
+      <div class="row" style="margin-top:12px"><button class="btn" id="zip" ${Object.keys(S.entries).length?"":"disabled"}>ZIP で書き出す</button></div>
+    </div>
+
+    <div class="card">
+      <h3>用語の統一</h3>
+      <p class="note">日記に書き込むとき、左の表記を右の正式名称に置き換えます。会話では略称のままで構いません。</p>
+      <table class="terms" id="terms">
+        ${S.settings.terms.map((t,i)=>`<tr><td><input type="text" data-t="${i}" data-c="0" value="${esc(t[0])}" placeholder="略称"></td><td style="width:20px;text-align:center">→</td><td><input type="text" data-t="${i}" data-c="1" value="${esc(t[1])}" placeholder="正式名称"></td><td style="width:60px"><button class="btn ghost small" data-del="${i}">削除</button></td></tr>`).join("")}
+      </table>
+      <div class="row" style="margin-top:10px"><button class="btn ghost small" id="tAdd">行を追加</button></div>
+    </div>
+
+    <div class="card">
+      <h3>バックアップ</h3>
+      <p class="note">データはこの端末のこのブラウザにだけ保存されています。ブラウザのデータを消すと日記も消えるため、定期的にバックアップを書き出してください。別の端末に移すときも、このファイルを読み込みます。</p>
+      <div class="row" style="margin-top:12px">
+        <button class="btn" id="bk">バックアップ（.json）を書き出す</button>
+        <label class="btn ghost" style="cursor:pointer">読み込む<input type="file" id="imp" accept="application/json,.json" hidden></label>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>データについて</h3>
+      <p class="note">日記の内容が外部のサーバーに送信されることはありません。Claude への依頼文はクリップボードにコピーされるだけで、貼り付けるかどうかは自分で決められます。</p>
+      <div class="row" style="margin-top:12px"><button class="btn danger small" id="wipe">すべてのデータを削除</button></div>
+    </div>
+  `;
+  $("#rTime").onchange = e => { S.settings.reminder = e.target.value || "21:00"; save(); };
+  $("#rIcs").onclick = () => download("nikki-reminder.ics", buildIcs(S.settings.reminder), "text/calendar;charset=utf-8");
+  $("#zip").onclick = exportZip;
+  el.querySelectorAll("[data-t]").forEach(inp => inp.oninput = () => { S.settings.terms[+inp.dataset.t][+inp.dataset.c] = inp.value; save(); });
+  el.querySelectorAll("[data-del]").forEach(b => b.onclick = () => { S.settings.terms.splice(+b.dataset.del,1); save(); renderSettings(); });
+  $("#tAdd").onclick = () => { S.settings.terms.push(["",""]); save(); renderSettings(); };
+  $("#bk").onclick = () => download(`nikki-backup-${todayStr()}.json`, JSON.stringify({...S, draft:null}, null, 2), "application/json");
+  $("#imp").onchange = async e => {
+    const f = e.target.files[0]; if(!f) return;
+    try{
+      const data = JSON.parse(await f.text());
+      if(!data || typeof data.entries !== "object") throw new Error("形式が違います");
+      const n = Object.keys(data.entries).length;
+      const mode = confirm(`${n}日分の日記が含まれています。\n\nOK：今のデータと統合する（同じ日付は読み込んだ側で上書き）\nキャンセル：読み込みをやめる`);
+      if(!mode) return;
+      S.entries = {...S.entries, ...data.entries};
+      S.reviews = {...S.reviews, ...(data.reviews||{})};
+      if(data.settings) S.settings = {...S.settings, ...data.settings};
+      save(); refreshAll(); toast(`${n}日分を読み込みました`);
+    }catch(err){ toast("読み込めませんでした。バックアップファイルか確認してください。"); }
+    e.target.value = "";
+  };
+  $("#wipe").onclick = () => {
+    if(!confirm("すべての日記と設定を削除します。元に戻せません。")) return;
+    if(prompt("確認のため「削除」と入力してください。") !== "削除") return;
+    localStorage.removeItem(STORE_KEY); S = defaultState(); W = null; refreshAll(); toast("削除しました");
+  };
+}
+
+function buildIcs(hm){
+  const [h,mi] = (hm||"21:00").split(":");
+  const d = todayStr().replace(/-/g,"");
+  const stamp = new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d+/,"");
+  const url = location.href.split("#")[0];
+  return [
+    "BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//NIKKI//Diary Reminder//JA","CALSCALE:GREGORIAN",
+    "BEGIN:VEVENT",
+    `UID:nikki-reminder-${d}@nikki.local`,
+    `DTSTAMP:${stamp}`,
+    `DTSTART:${d}T${h}${mi}00`,
+    "DURATION:PT15M",
+    "RRULE:FREQ=DAILY",
+    "SUMMARY:日記を書く",
+    `DESCRIPTION:質問に答えるだけで日記が組み上がります。${url}`,
+    `URL:${url}`,
+    "BEGIN:VALARM","TRIGGER:PT0M","ACTION:DISPLAY","DESCRIPTION:日記の時間です","END:VALARM",
+    "END:VEVENT","END:VCALENDAR",""
+  ].join("\r\n");
+}
+
+/* ---------- ZIP（無圧縮・依存ライブラリなし） ---------- */
+const CRC_TABLE = (() => { const t = new Uint32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c = c&1 ? 0xEDB88320^(c>>>1) : c>>>1; t[n]=c>>>0; } return t; })();
+function crc32(buf){ let c = 0xFFFFFFFF; for(let i=0;i<buf.length;i++) c = CRC_TABLE[(c^buf[i])&0xFF]^(c>>>8); return (c^0xFFFFFFFF)>>>0; }
+function makeZip(files){
+  const enc = new TextEncoder(), chunks = [], central = [];
+  let offset = 0;
+  const now = new Date();
+  const dosTime = (now.getHours()<<11)|(now.getMinutes()<<5)|(now.getSeconds()>>1);
+  const dosDate = ((now.getFullYear()-1980)<<9)|((now.getMonth()+1)<<5)|now.getDate();
+  for(const f of files){
+    const name = enc.encode(f.name), data = enc.encode(f.content), crc = crc32(data);
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0,0x04034b50,true); lh.setUint16(4,20,true); lh.setUint16(6,0x0800,true); lh.setUint16(8,0,true);
+    lh.setUint16(10,dosTime,true); lh.setUint16(12,dosDate,true); lh.setUint32(14,crc,true);
+    lh.setUint32(18,data.length,true); lh.setUint32(22,data.length,true); lh.setUint16(26,name.length,true); lh.setUint16(28,0,true);
+    chunks.push(new Uint8Array(lh.buffer), name, data);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0,0x02014b50,true); ch.setUint16(4,20,true); ch.setUint16(6,20,true); ch.setUint16(8,0x0800,true); ch.setUint16(10,0,true);
+    ch.setUint16(12,dosTime,true); ch.setUint16(14,dosDate,true); ch.setUint32(16,crc,true);
+    ch.setUint32(20,data.length,true); ch.setUint32(24,data.length,true); ch.setUint16(28,name.length,true);
+    ch.setUint16(30,0,true); ch.setUint16(32,0,true); ch.setUint16(34,0,true); ch.setUint16(36,0,true); ch.setUint32(38,0,true); ch.setUint32(42,offset,true);
+    central.push(new Uint8Array(ch.buffer), name);
+    offset += 30 + name.length + data.length;
+  }
+  const cdSize = central.reduce((a,c)=>a+c.length,0);
+  const end = new DataView(new ArrayBuffer(22));
+  end.setUint32(0,0x06054b50,true); end.setUint16(8,files.length,true); end.setUint16(10,files.length,true);
+  end.setUint32(12,cdSize,true); end.setUint32(16,offset,true);
+  return new Blob([...chunks, ...central, new Uint8Array(end.buffer)], {type:"application/zip"});
+}
+function exportZip(){
+  const files = [];
+  for(const d of Object.keys(S.entries).sort()){
+    files.push({name:`日記/${mondayOf(d)}週/${d}.md`, content:S.entries[d].markdown});
+  }
+  const weeks = [...new Set(Object.keys(S.entries).map(mondayOf))].sort();
+  for(const w of weeks) files.push({name:`日記/${w}週/${w}_週次レビュー.md`, content:weeklyMarkdown(w)});
+  download(`nikki-obsidian-${todayStr()}.zip`, makeZip(files));
+  toast(`${files.length}ファイルを書き出しました`);
+}
+
+/* =========================================================
+   MODAL / TABS / BOOT
+   ========================================================= */
+function openModal(html){
+  $("#sheet").innerHTML = `<div class="bar"></div>${html}`;
+  $("#modal").classList.add("on");
+  $("#sheet").querySelectorAll("[data-close]").forEach(b => b.onclick = closeModal);
+}
+function closeModal(){ $("#modal").classList.remove("on"); }
+$("#modal").addEventListener("click", e => { if(e.target.id === "modal") closeModal(); });
+document.addEventListener("keydown", e => { if(e.key === "Escape") closeModal(); });
+
+let currentTab = "write";
+function switchTab(tab){
+  currentTab = tab;
+  document.querySelectorAll("nav.tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === tab));
+  document.querySelectorAll("section.view").forEach(s => s.classList.toggle("on", s.id === `v-${tab}`));
+  refreshAll(); window.scrollTo({top:0});
+}
+function refreshAll(){
+  if(currentTab === "write") renderWrite();
+  if(currentTab === "records") renderRecords();
+  if(currentTab === "review") renderReview();
+  if(currentTab === "settings") renderSettings();
+}
+document.querySelectorAll("nav.tabs button").forEach(b => b.onclick = () => switchTab(b.dataset.tab));
+$("#todayLabel").textContent = jpDate(todayStr());
+renderWrite();
+</script>
+</body>
+</html>
